@@ -48,6 +48,11 @@ Filter fields:
 - `macs`
 - `status_types`
 
+Feed JSON Schema:
+
+- `docs/collector-feed.schema.json`
+- Models standard vs VSA decoded attributes without enumerating vendor dictionary value lists.
+
 ## Health
 
 `GET /healthz`
