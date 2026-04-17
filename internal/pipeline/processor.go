@@ -2,17 +2,17 @@ package pipeline
 
 import (
 	"encoding/hex"
-	"log"
+	"log/slog"
 
-	"github.com/elin/tzsp-radius-collector/internal/radiusdecode"
+	"github.com/vanelm/tzsp-radius-collector/internal/radiusdecode"
 )
 
 type Processor struct {
 	dict   *radiusdecode.AttributeDictionary
-	logger *log.Logger
+	logger *slog.Logger
 }
 
-func NewProcessor(dict *radiusdecode.AttributeDictionary, logger *log.Logger) *Processor {
+func NewProcessor(dict *radiusdecode.AttributeDictionary, logger *slog.Logger) *Processor {
 	return &Processor{dict: dict, logger: logger}
 }
 

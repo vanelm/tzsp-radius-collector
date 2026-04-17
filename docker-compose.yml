@@ -1,0 +1,53 @@
+services:
+  tzsp-radius-collector:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: tzsp-radius-collector
+    environment:
+      URSA_APP_ENV: ${URSA_APP_ENV:-development}
+      URSA_LOG_LEVEL: ${URSA_LOG_LEVEL:-info}
+      URSA_TZSP_HTTP_LISTEN: ${URSA_TZSP_HTTP_LISTEN:-:8098}
+      URSA_TZSP_WS_PATH: ${URSA_TZSP_WS_PATH:-/ws}
+      URSA_TZSP_ENABLE_UDP: ${URSA_TZSP_ENABLE_UDP:-true}
+      URSA_TZSP_UDP_LISTEN: ${URSA_TZSP_UDP_LISTEN:-:37008}
+      URSA_TZSP_ENABLE_RAW_SNIFF: ${URSA_TZSP_ENABLE_RAW_SNIFF:-false}
+      URSA_TZSP_SNIFF_IFACE: ${URSA_TZSP_SNIFF_IFACE:-eth0}
+      URSA_TZSP_SNIFF_FILTER: ${URSA_TZSP_SNIFF_FILTER:-udp and (port 1812 or port 1813)}
+      URSA_TZSP_SNIFF_PROMISCUOUS: ${URSA_TZSP_SNIFF_PROMISCUOUS:-false}
+      URSA_TZSP_DICTIONARY_GLOB: ${URSA_TZSP_DICTIONARY_GLOB:-/app/config/dictionary/dictionary.*}
+      URSA_TZSP_ENABLE_MDNS: ${URSA_TZSP_ENABLE_MDNS:-true}
+      URSA_TZSP_MDNS_NAME: ${URSA_TZSP_MDNS_NAME:-radius-collector}
+      URSA_TZSP_MDNS_PORT: ${URSA_TZSP_MDNS_PORT:-8098}
+    ports:
+      - "8098:8098"
+      - "37008:37008/udp"
+    restart: unless-stopped
+    labels:
+      - "observability.stack=tzsp-local"
+
+  vector:
+    image: timberio/vector:0.34.X-debian
+    container_name: tzsp-vector
+    depends_on:
+      - tzsp-radius-collector
+      - dizzle
+    environment:
+      URSA_SYSLOG_SERVER: ${URSA_SYSLOG_SERVER:-dizzle}
+    volumes:
+      - ./config/vector.local.toml:/etc/vector/vector.toml:ro
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+    command: --config /etc/vector/vector.toml
+    restart: unless-stopped
+
+  dizzle:
+    image: alpine/socat:1.8.0.0
+    container_name: tzsp-dizzle
+    command:
+      - -d
+      - -d
+      - UDP-RECV:514,fork,reuseaddr
+      - STDOUT
+    ports:
+      - "5514:514/udp"
+    restart: unless-stopped

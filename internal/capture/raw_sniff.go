@@ -2,22 +2,22 @@ package capture
 
 import (
 	"context"
-	"log"
+	"log/slog"
 	"time"
 
-	"github.com/elin/tzsp-radius-collector/internal/config"
-	"github.com/elin/tzsp-radius-collector/internal/pipeline"
 	"github.com/google/gopacket"
 	"github.com/google/gopacket/afpacket"
 	"github.com/google/gopacket/layers"
+	"github.com/vanelm/tzsp-radius-collector/internal/config"
+	"github.com/vanelm/tzsp-radius-collector/internal/pipeline"
 )
 
 type RawSniffer struct {
 	cfg    config.Config
-	logger *log.Logger
+	logger *slog.Logger
 }
 
-func NewRawSniffer(cfg config.Config, logger *log.Logger) *RawSniffer {
+func NewRawSniffer(cfg config.Config, logger *slog.Logger) *RawSniffer {
 	return &RawSniffer{cfg: cfg, logger: logger}
 }
 
@@ -28,11 +28,14 @@ func (s *RawSniffer) Run(ctx context.Context, out chan<- pipeline.Event) {
 		afpacket.OptPollTimeout(500*time.Millisecond),
 	)
 	if err != nil {
-		s.logger.Printf("raw sniff disabled: %v", err)
+		s.logger.Warn("raw sniff disabled", "error", err, "interface", s.cfg.SniffInterface)
 		return
 	}
 	defer handle.Close()
-	s.logger.Printf("raw sniff enabled on iface=%s", s.cfg.SniffInterface)
+	if s.cfg.SniffPromisc {
+		s.logger.Warn("promiscuous mode requested but unsupported by current backend", "promiscuous", true)
+	}
+	s.logger.Info("raw sniff enabled", "interface", s.cfg.SniffInterface)
 
 	source := gopacket.NewPacketSource(handle, layers.LayerTypeEthernet)
 	packets := source.Packets()

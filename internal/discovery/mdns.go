@@ -2,12 +2,12 @@ package discovery
 
 import (
 	"fmt"
-	"log"
+	"log/slog"
 	"os"
 	"strings"
 
-	"github.com/elin/tzsp-radius-collector/internal/config"
 	"github.com/grandcat/zeroconf"
+	"github.com/vanelm/tzsp-radius-collector/internal/config"
 )
 
 type Handle struct {
@@ -21,7 +21,7 @@ func (h *Handle) Shutdown() {
 	h.server.Shutdown()
 }
 
-func StartMDNS(cfg config.Config, logger *log.Logger) (*Handle, error) {
+func StartMDNS(cfg config.Config, logger *slog.Logger) (*Handle, error) {
 	host, _ := os.Hostname()
 	if host == "" {
 		host = "localhost"
@@ -42,7 +42,7 @@ func StartMDNS(cfg config.Config, logger *log.Logger) (*Handle, error) {
 	if err != nil {
 		return nil, err
 	}
-	logger.Printf("mdns published: instance=%s type=_tzsp_collector._tcp port=%d", instance, cfg.MDNSPort)
+	logger.Info("mdns published", "instance", instance, "service_type", "_tzsp_collector._tcp", "port", cfg.MDNSPort)
 	return &Handle{server: server}, nil
 }
 

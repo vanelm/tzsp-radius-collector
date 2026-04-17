@@ -1,0 +1,24 @@
+# Local Vector config for tzsp-radius-collector + dizzle sink.
+
+[sources.docker]
+  type = "docker_logs"
+
+[transforms.only_important]
+  type = "filter"
+  inputs = ["docker"]
+  condition = 'includes(["info", "warn", "error"], downcase(to_string(.level) ?? "")) || (to_int(.status) ?? 0) >= 400'
+
+[transforms.parse_json]
+  type = "remap"
+  inputs = ["only_important"]
+  source = '''
+    . = parse_json!(.message)
+  '''
+  drop_on_error = true
+
+[sinks.syslog_out]
+  type = "socket"
+  inputs = ["parse_json"]
+  address = "${URSA_SYSLOG_SERVER:-dizzle}:514"
+  mode = "udp"
+  encoding.codec = "json"

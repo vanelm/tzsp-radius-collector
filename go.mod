@@ -1,4 +1,4 @@
-module github.com/elin/tzsp-radius-collector
+module github.com/vanelm/tzsp-radius-collector
 
 go 1.22
 

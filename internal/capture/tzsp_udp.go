@@ -2,35 +2,35 @@ package capture
 
 import (
 	"context"
-	"log"
+	"log/slog"
 	"net"
 	"time"
 
-	"github.com/elin/tzsp-radius-collector/internal/config"
-	"github.com/elin/tzsp-radius-collector/internal/pipeline"
-	"github.com/elin/tzsp-radius-collector/internal/tzsp"
 	"github.com/google/gopacket"
 	"github.com/google/gopacket/layers"
+	"github.com/vanelm/tzsp-radius-collector/internal/config"
+	"github.com/vanelm/tzsp-radius-collector/internal/pipeline"
+	"github.com/vanelm/tzsp-radius-collector/internal/tzsp"
 )
 
 type TZSPUDPListener struct {
 	cfg    config.Config
-	logger *log.Logger
+	logger *slog.Logger
 }
 
-func NewTZSPUDPListener(cfg config.Config, logger *log.Logger) *TZSPUDPListener {
+func NewTZSPUDPListener(cfg config.Config, logger *slog.Logger) *TZSPUDPListener {
 	return &TZSPUDPListener{cfg: cfg, logger: logger}
 }
 
 func (l *TZSPUDPListener) Run(ctx context.Context, out chan<- pipeline.Event) {
 	conn, err := net.ListenPacket("udp", l.cfg.TZSPListen)
 	if err != nil {
-		l.logger.Printf("tzsp udp listen failed: %v", err)
+		l.logger.Error("tzsp udp listen failed", "error", err, "listen_addr", l.cfg.TZSPListen)
 		return
 	}
 	defer conn.Close()
 
-	l.logger.Printf("tzsp udp capture enabled on %s", l.cfg.TZSPListen)
+	l.logger.Info("tzsp udp capture enabled", "listen_addr", l.cfg.TZSPListen)
 	buffer := make([]byte, 64*1024)
 	for {
 		_ = conn.SetReadDeadline(time.Now().Add(1 * time.Second))

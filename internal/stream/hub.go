@@ -3,10 +3,10 @@ package stream
 import (
 	"context"
 	"encoding/json"
-	"log"
+	"log/slog"
 	"sync"
 
-	"github.com/elin/tzsp-radius-collector/internal/pipeline"
+	"github.com/vanelm/tzsp-radius-collector/internal/pipeline"
 )
 
 type Filter struct {
@@ -25,14 +25,14 @@ type Client struct {
 }
 
 type Hub struct {
-	logger    *log.Logger
+	logger    *slog.Logger
 	queueSize int
 
 	mu      sync.RWMutex
 	clients map[string]*Client
 }
 
-func NewHub(logger *log.Logger, queueSize int) *Hub {
+func NewHub(logger *slog.Logger, queueSize int) *Hub {
 	return &Hub{
 		logger:    logger,
 		queueSize: queueSize,
@@ -92,7 +92,7 @@ func (h *Hub) Publish(msg pipeline.StreamMessage) {
 		select {
 		case client.send <- payload:
 		default:
-			h.logger.Printf("disconnecting slow client: %s", client.id)
+			h.logger.Warn("disconnecting slow client", "client_id", client.id)
 			go h.Remove(client.id)
 		}
 	}

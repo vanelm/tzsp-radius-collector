@@ -6,8 +6,8 @@ import (
 	"strings"
 	"time"
 
-	"github.com/elin/tzsp-radius-collector/internal/config"
 	"github.com/gorilla/websocket"
+	"github.com/vanelm/tzsp-radius-collector/internal/config"
 )
 
 var upgrader = websocket.Upgrader{

@@ -7,6 +7,8 @@ import (
 )
 
 type Config struct {
+	AppEnv            string
+	LogLevel          string
 	HTTPListen        string
 	WSPath            string
 	EventQueue        int
@@ -18,6 +20,7 @@ type Config struct {
 	EnableRawSniff bool
 	SniffInterface string
 	SniffFilter    string
+	SniffPromisc   bool
 
 	DictionaryGlob string
 
@@ -28,6 +31,8 @@ type Config struct {
 
 func Load() Config {
 	return Config{
+		AppEnv:            env("URSA_APP_ENV", "development"),
+		LogLevel:          env("URSA_LOG_LEVEL", ""),
 		HTTPListen:        env("URSA_TZSP_HTTP_LISTEN", ":8098"),
 		WSPath:            env("URSA_TZSP_WS_PATH", "/ws"),
 		EventQueue:        envInt("URSA_TZSP_EVENT_QUEUE", 1024),
@@ -39,6 +44,7 @@ func Load() Config {
 		EnableRawSniff: envBool("URSA_TZSP_ENABLE_RAW_SNIFF", false),
 		SniffInterface: env("URSA_TZSP_SNIFF_IFACE", "eth0"),
 		SniffFilter:    env("URSA_TZSP_SNIFF_FILTER", "udp and (port 1812 or port 1813)"),
+		SniffPromisc:   envBool("URSA_TZSP_SNIFF_PROMISCUOUS", false),
 
 		DictionaryGlob: env("URSA_TZSP_DICTIONARY_GLOB", "./config/dictionary/dictionary.*"),
 
