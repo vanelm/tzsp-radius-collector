@@ -23,12 +23,3 @@ services:
     restart: unless-stopped
     labels:
       - "observability.stack=tzsp-local"
-
-  dozzle:
-    image: amir20/dozzle:latest
-    container_name: tzsp-dozzle
-    ports:
-      - "9999:8080"
-    volumes:
-      - /var/run/docker.sock:/var/run/docker.sock:ro
-    restart: unless-stopped
