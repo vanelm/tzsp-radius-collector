@@ -4,6 +4,7 @@ services:
       context: .
       dockerfile: Dockerfile
     container_name: tzsp-radius-collector
+    network_mode: host
     environment:
       URSA_APP_ENV: ${URSA_APP_ENV:-development}
       URSA_LOG_LEVEL: ${URSA_LOG_LEVEL:-info}
@@ -19,9 +20,6 @@ services:
       URSA_TZSP_ENABLE_MDNS: ${URSA_TZSP_ENABLE_MDNS:-true}
       URSA_TZSP_MDNS_NAME: ${URSA_TZSP_MDNS_NAME:-radius-collector}
       URSA_TZSP_MDNS_PORT: ${URSA_TZSP_MDNS_PORT:-8098}
-    ports:
-      - "8098:8098"
-      - "37008:37008/udp"
     restart: unless-stopped
     labels:
       - "observability.stack=tzsp-local"
@@ -43,11 +41,7 @@ services:
   dizzle:
     image: alpine/socat:1.8.0.0
     container_name: tzsp-dizzle
-    command:
-      - -d
-      - -d
-      - UDP-RECV:514,fork,reuseaddr
-      - STDOUT
+    command: UDP-RECVFROM:514,reuseaddr,fork STDOUT
     ports:
       - "5514:514/udp"
     restart: unless-stopped
