@@ -8,6 +8,8 @@ type Event struct {
 	PacketBytes  []byte
 	RemoteAddr   string
 	CaptureIface string
+	SrcAddr      string
+	DstAddr      string
 }
 
 type StreamMessage struct {
@@ -15,6 +17,8 @@ type StreamMessage struct {
 	Source            string                         `json:"source"`
 	RemoteAddr        string                         `json:"remote_addr,omitempty"`
 	CaptureInterface  string                         `json:"capture_interface,omitempty"`
+	SrcAddr           string                         `json:"src_addr,omitempty"`
+	DstAddr           string                         `json:"dst_addr,omitempty"`
 	Radius            RadiusPacket                   `json:"radius"`
 	DecodedAttributes []map[string]any               `json:"decoded_attributes"`
 	Accounting        map[string]any                 `json:"accounting,omitempty"`

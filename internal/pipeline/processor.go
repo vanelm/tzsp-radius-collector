@@ -22,6 +22,8 @@ func (p *Processor) Transform(event Event) (StreamMessage, error) {
 		Source:           event.Source,
 		RemoteAddr:       event.RemoteAddr,
 		CaptureInterface: event.CaptureIface,
+		SrcAddr:          event.SrcAddr,
+		DstAddr:          event.DstAddr,
 		DecodedAttributes: make([]map[string]any, 0),
 	}
 

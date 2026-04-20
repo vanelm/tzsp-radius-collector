@@ -50,33 +50,38 @@ func (l *TZSPUDPListener) Run(ctx context.Context, out chan<- pipeline.Event) {
 		if err != nil {
 			continue
 		}
-		radiusPayload := extractUDPPayload(pkt.Payload)
+		radiusPayload, srcAddr, dstAddr := extractUDPPayload(pkt.Payload)
 		if len(radiusPayload) == 0 {
 			continue
 		}
 		select {
-		case out <- pipeline.Event{Source: "tzsp_udp", ReceivedAt: time.Now().UTC(), PacketBytes: radiusPayload, RemoteAddr: addr.String()}:
+		case out <- pipeline.Event{Source: "tzsp_udp", ReceivedAt: time.Now().UTC(), PacketBytes: radiusPayload, RemoteAddr: addr.String(), SrcAddr: srcAddr, DstAddr: dstAddr}:
 		case <-ctx.Done():
 			return
 		}
 	}
 }
 
-func extractUDPPayload(payload []byte) []byte {
+func extractUDPPayload(payload []byte) (radiusBytes []byte, srcAddr, dstAddr string) {
 	if len(payload) == 0 {
-		return nil
+		return nil, "", ""
 	}
 	if looksLikeRadius(payload) {
-		return append([]byte(nil), payload...)
+		return append([]byte(nil), payload...), "", ""
 	}
 	packet := gopacket.NewPacket(payload, layers.LayerTypeEthernet, gopacket.Default)
 	if udp := packet.Layer(layers.LayerTypeUDP); udp != nil {
 		udpLayer := udp.(*layers.UDP)
 		if udpLayer.SrcPort == 1812 || udpLayer.SrcPort == 1813 || udpLayer.DstPort == 1812 || udpLayer.DstPort == 1813 {
-			return append([]byte(nil), udpLayer.Payload...)
+			if ipv4 := packet.Layer(layers.LayerTypeIPv4); ipv4 != nil {
+				ip := ipv4.(*layers.IPv4)
+				srcAddr = ip.SrcIP.String()
+				dstAddr = ip.DstIP.String()
+			}
+			return append([]byte(nil), udpLayer.Payload...), srcAddr, dstAddr
 		}
 	}
-	return nil
+	return nil, "", ""
 }
 
 func looksLikeRadius(payload []byte) bool {

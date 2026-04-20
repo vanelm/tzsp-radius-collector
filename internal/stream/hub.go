@@ -19,9 +19,9 @@ type Filter struct {
 }
 
 type Client struct {
-	id      string
-	send    chan []byte
-	filter  Filter
+	id     string
+	send   chan []byte
+	filter Filter
 }
 
 type Hub struct {

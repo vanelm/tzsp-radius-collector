@@ -55,7 +55,13 @@ func (s *RawSniffer) Run(ctx context.Context, out chan<- pipeline.Event) {
 			if !looksLikeRadius(udp.Payload) {
 				continue
 			}
-			event := pipeline.Event{Source: "raw_sniff", ReceivedAt: time.Now().UTC(), PacketBytes: append([]byte(nil), udp.Payload...), CaptureIface: s.cfg.SniffInterface}
+			var srcAddr, dstAddr string
+			if ipv4 := packet.Layer(layers.LayerTypeIPv4); ipv4 != nil {
+				ip := ipv4.(*layers.IPv4)
+				srcAddr = ip.SrcIP.String()
+				dstAddr = ip.DstIP.String()
+			}
+			event := pipeline.Event{Source: "raw_sniff", ReceivedAt: time.Now().UTC(), PacketBytes: append([]byte(nil), udp.Payload...), CaptureIface: s.cfg.SniffInterface, SrcAddr: srcAddr, DstAddr: dstAddr}
 			select {
 			case out <- event:
 			case <-ctx.Done():
