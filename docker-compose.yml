@@ -4,7 +4,9 @@ services:
       context: .
       dockerfile: Dockerfile
     container_name: tzsp-radius-collector
-    network_mode: host
+    ports:
+      - "8098:8098"
+      - "37008:37008/udp"
     environment:
       URSA_APP_ENV: ${URSA_APP_ENV:-development}
       URSA_LOG_LEVEL: ${URSA_LOG_LEVEL:-debug}
