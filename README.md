@@ -67,30 +67,26 @@ avahi-browse -art | grep tzsp_collector
 
 - Logs are emitted as JSON to `stdout` using `slog`.
 - Field names follow `snake_case` and include component labels for easier routing.
-- This matches the root Vector pipeline expectations that parse JSON logs and forward selected events.
 
-## Local Docker Stack (Collector + Vector + Dizzle)
+## Local Docker
 
-The repository now includes a local stack for observability testing:
-
-- `tzsp-radius-collector` service
-- `vector` (collects Docker logs, parses JSON, forwards UDP)
-- `dizzle` sink (simple UDP receiver on port 514)
-
-Start stack:
+Start the collector:
 
 ```bash
-docker compose up --build
+docker compose up -d --build
 ```
 
-Stop stack:
+Exposed ports: `8098` (HTTP/WS), `37008/udp` (TZSP ingest).
+
+### Dozzle (optional log viewer)
+
+Copy the override file so `docker compose` picks it up automatically:
 
 ```bash
-docker compose down
+cp docker-compose.override.devel.yml docker-compose.override.yml
+docker compose up -d
 ```
 
-Inspect `dizzle` forwarded logs:
+Then open http://localhost:9999 for a web-based container log viewer.
 
-```bash
-docker logs -f tzsp-dizzle
-```
+`docker-compose.override.yml` is git-ignored — the override is opt-in per developer.
