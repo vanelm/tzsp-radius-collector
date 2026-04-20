@@ -7,7 +7,7 @@ services:
     network_mode: host
     environment:
       URSA_APP_ENV: ${URSA_APP_ENV:-development}
-      URSA_LOG_LEVEL: ${URSA_LOG_LEVEL:-info}
+      URSA_LOG_LEVEL: ${URSA_LOG_LEVEL:-debug}
       URSA_TZSP_HTTP_LISTEN: ${URSA_TZSP_HTTP_LISTEN:-:8098}
       URSA_TZSP_WS_PATH: ${URSA_TZSP_WS_PATH:-/ws}
       URSA_TZSP_ENABLE_UDP: ${URSA_TZSP_ENABLE_UDP:-true}
@@ -24,24 +24,11 @@ services:
     labels:
       - "observability.stack=tzsp-local"
 
-  vector:
-    image: timberio/vector:0.34.X-debian
-    container_name: tzsp-vector
-    depends_on:
-      - tzsp-radius-collector
-      - dizzle
-    environment:
-      URSA_SYSLOG_SERVER: ${URSA_SYSLOG_SERVER:-dizzle}
-    volumes:
-      - ./config/vector.local.toml:/etc/vector/vector.toml:ro
-      - /var/run/docker.sock:/var/run/docker.sock:ro
-    command: --config /etc/vector/vector.toml
-    restart: unless-stopped
-
-  dizzle:
-    image: alpine/socat:1.8.0.0
-    container_name: tzsp-dizzle
-    command: UDP-RECVFROM:514,reuseaddr,fork STDOUT
+  dozzle:
+    image: amir20/dozzle:latest
+    container_name: tzsp-dozzle
     ports:
-      - "5514:514/udp"
+      - "9999:8080"
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
     restart: unless-stopped
