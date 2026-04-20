@@ -106,6 +106,7 @@ func fanout(ctx context.Context, logger *slog.Logger, hub *stream.Hub, processor
 				logger.Debug("event transform skipped", "error", err, "source", event.Source)
 				continue
 			}
+			logger.Debug("packet decoded", "code", msg.Radius.CodeName, "source", event.Source, "attrs", len(msg.DecodedAttributes))
 			hub.Publish(msg)
 		}
 	}

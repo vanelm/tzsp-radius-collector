@@ -55,6 +55,7 @@ func (h *Hub) Add(id string) *Client {
 	defer h.mu.Unlock()
 	client := &Client{id: id, send: make(chan []byte, h.queueSize)}
 	h.clients[id] = client
+	h.logger.Debug("client connected", "client_id", id, "total", len(h.clients))
 	return client
 }
 
@@ -67,6 +68,7 @@ func (h *Hub) Remove(id string) {
 	}
 	delete(h.clients, id)
 	close(client.send)
+	h.logger.Debug("client disconnected", "client_id", id, "total", len(h.clients))
 }
 
 func (h *Hub) UpdateFilter(id string, filter Filter) {
@@ -74,6 +76,7 @@ func (h *Hub) UpdateFilter(id string, filter Filter) {
 	defer h.mu.Unlock()
 	if client := h.clients[id]; client != nil {
 		client.filter = filter
+		h.logger.Debug("filter updated", "client_id", id, "filter", filter)
 	}
 }
 
