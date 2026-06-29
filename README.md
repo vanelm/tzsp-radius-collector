@@ -9,6 +9,9 @@ Small collector that ingests TZSP and raw-sniffed RADIUS traffic, decodes attrib
 - Dictionary-based attribute decode (standard + VSA)
 - Accounting snapshot extraction
 - WebSocket stream endpoint with subscription filters
+- **RADIUS test harness**: verbatim UDP forwarding, request recording/replay, NAS/client catalog, synthetic traffic generation
+- Embedded web UI at `/` (English)
+- REST API at `/api/v1/`
 - mDNS advertisement on `_tzsp_collector._tcp`
 - Structured JSON logging via `slog` (Vector-friendly)
 
@@ -30,6 +33,36 @@ All service variables are URSA-prefixed:
 - `URSA_TZSP_ENABLE_MDNS` default `true`
 - `URSA_TZSP_MDNS_NAME` default `tzsp-radius-collector`
 - `URSA_TZSP_MDNS_PORT` default `8098`
+- `URSA_TZSP_DB_PATH` default `./data/collector.db`
+- `URSA_TZSP_FORWARD_AUTH_TARGET` default `127.0.0.1:1812`
+- `URSA_TZSP_FORWARD_ACCT_TARGET` default `127.0.0.1:1813`
+
+## Web UI
+
+Open `http://host:8098/` for the test harness UI:
+
+- **Live** — WebSocket feed viewer
+- **Forward** — enable/disable verbatim RADIUS request forwarding
+- **Recordings** — record, replay (rate or preserved timing), delete
+- **Catalog** — manage NAS and client (MAC) entries
+- **Synthesize** — generate auth/accounting sessions from catalog data
+
+## REST API
+
+Base path: `/api/v1/`
+
+| Method | Path | Description |
+|--------|------|-------------|
+| GET | `/status` | Forwarder, recorder, replay, synth state |
+| GET/PUT | `/forwarder` | Forwarder config |
+| CRUD | `/nas`, `/clients` | Catalog |
+| GET | `/recordings` | List recordings |
+| POST | `/recordings/start`, `/recordings/stop` | Recording control |
+| GET/DELETE | `/recordings/{id}` | Recording detail |
+| POST | `/recordings/{id}/replay` | Replay with `rate_rps`, `preserve_timing`, `loop` |
+| POST | `/replay/stop` | Stop replay |
+| POST | `/scenarios/run` | Run synthetic traffic |
+| POST | `/synth/stop` | Stop synthesis |
 
 ## WebSocket
 

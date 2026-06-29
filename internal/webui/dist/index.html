@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>RADIUS Test Harness</title>
+  <link rel="stylesheet" href="/style.css" />
+</head>
+<body>
+  <div class="app">
+    <aside class="sidebar">
+      <h1>RADIUS Harness</h1>
+      <nav>
+        <button class="nav-btn active" data-tab="live">Live</button>
+        <button class="nav-btn" data-tab="forward">Forward</button>
+        <button class="nav-btn" data-tab="recordings">Recordings</button>
+        <button class="nav-btn" data-tab="catalog">Catalog</button>
+        <button class="nav-btn" data-tab="synthesize">Synthesize</button>
+      </nav>
+      <div class="status-box" id="status-box">Loading status...</div>
+    </aside>
+    <main>
+      <section id="tab-live" class="tab active">
+        <header>
+          <h2>Live Feed</h2>
+          <label><input type="checkbox" id="live-pause" /> Pause</label>
+          <button id="live-clear">Clear</button>
+        </header>
+        <table>
+          <thead><tr><th>Time</th><th>Source</th><th>Code</th><th>User</th><th>MAC</th><th>NAS</th></tr></thead>
+          <tbody id="live-rows"></tbody>
+        </table>
+      </section>
+
+      <section id="tab-forward" class="tab">
+        <h2>Forwarder</h2>
+        <form id="forward-form" class="form-grid">
+          <label><input type="checkbox" id="fwd-enabled" /> Enabled</label>
+          <label>Auth target <input id="fwd-auth" placeholder="127.0.0.1:1812" /></label>
+          <label>Acct target <input id="fwd-acct" placeholder="127.0.0.1:1813" /></label>
+          <button type="submit">Save</button>
+        </form>
+        <p id="fwd-stats"></p>
+      </section>
+
+      <section id="tab-recordings" class="tab">
+        <h2>Recordings</h2>
+        <div class="row">
+          <input id="rec-name" placeholder="Recording name" />
+          <button id="rec-start">Start</button>
+          <button id="rec-stop">Stop</button>
+        </div>
+        <table>
+          <thead><tr><th>Name</th><th>Packets</th><th>Started</th><th>Actions</th></tr></thead>
+          <tbody id="rec-rows"></tbody>
+        </table>
+        <div class="replay-panel">
+          <h3>Replay</h3>
+          <label>Rate (RPS) <input type="number" id="replay-rate" value="10" min="0.1" step="0.1" /></label>
+          <label><input type="checkbox" id="replay-timing" /> Preserve timing</label>
+          <label><input type="checkbox" id="replay-loop" /> Loop</label>
+          <button id="replay-stop">Stop replay</button>
+        </div>
+      </section>
+
+      <section id="tab-catalog" class="tab">
+        <h2>NAS</h2>
+        <form id="nas-form" class="form-grid">
+          <input name="name" placeholder="Name" required />
+          <input name="ip" placeholder="IP" required />
+          <input name="secret" placeholder="Secret" />
+          <input name="vendor" placeholder="Vendor" />
+          <input name="identifier" placeholder="Identifier" />
+          <button type="submit">Add NAS</button>
+        </form>
+        <table><thead><tr><th>Name</th><th>IP</th><th>Vendor</th><th></th></tr></thead><tbody id="nas-rows"></tbody></table>
+
+        <h2>Clients</h2>
+        <form id="client-form" class="form-grid">
+          <input name="mac" placeholder="MAC" required />
+          <input name="username" placeholder="Username" />
+          <button type="submit">Add Client</button>
+        </form>
+        <table><thead><tr><th>MAC</th><th>Username</th><th></th></tr></thead><tbody id="client-rows"></tbody></table>
+      </section>
+
+      <section id="tab-synthesize" class="tab">
+        <h2>Synthesize</h2>
+        <form id="synth-form" class="form-grid">
+          <label>NAS <select id="synth-nas" required></select></label>
+          <label>Clients <select id="synth-clients" multiple size="5"></select></label>
+          <label>Pattern
+            <select id="synth-pattern">
+              <option value="auth_only">auth_only</option>
+              <option value="acct_only">acct_only</option>
+              <option value="full_session" selected>full_session</option>
+            </select>
+          </label>
+          <label>Auth rate (RPS) <input type="number" id="synth-rate" value="2" min="0.1" step="0.1" /></label>
+          <label>Sessions <input type="number" id="synth-sessions" value="3" min="1" /></label>
+          <label>Interim interval (sec) <input type="number" id="synth-interim" value="60" min="1" /></label>
+          <label>Session duration (sec) <input type="number" id="synth-duration" value="180" min="1" /></label>
+          <button type="submit">Run</button>
+          <button type="button" id="synth-stop">Stop</button>
+        </form>
+        <p id="synth-status"></p>
+      </section>
+    </main>
+  </div>
+  <script src="/app.js"></script>
+</body>
+</html>

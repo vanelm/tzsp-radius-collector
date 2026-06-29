@@ -22,6 +22,14 @@ services:
       URSA_TZSP_ENABLE_MDNS: ${URSA_TZSP_ENABLE_MDNS:-true}
       URSA_TZSP_MDNS_NAME: ${URSA_TZSP_MDNS_NAME:-radius-collector}
       URSA_TZSP_MDNS_PORT: ${URSA_TZSP_MDNS_PORT:-8098}
+      URSA_TZSP_DB_PATH: ${URSA_TZSP_DB_PATH:-/app/data/collector.db}
+      URSA_TZSP_FORWARD_AUTH_TARGET: ${URSA_TZSP_FORWARD_AUTH_TARGET:-127.0.0.1:1812}
+      URSA_TZSP_FORWARD_ACCT_TARGET: ${URSA_TZSP_FORWARD_ACCT_TARGET:-127.0.0.1:1813}
+    volumes:
+      - collector-data:/app/data
     restart: unless-stopped
     labels:
       - "observability.stack=tzsp-local"
+
+volumes:
+  collector-data:

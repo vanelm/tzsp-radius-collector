@@ -1,3 +1,5 @@
 bin/
 *.log
+data/
+.env
 docker-compose.override.yml

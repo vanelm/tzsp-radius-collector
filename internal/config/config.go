@@ -27,6 +27,10 @@ type Config struct {
 	EnableMDNS bool
 	MDNSName   string
 	MDNSPort   int
+
+	DBPath            string
+	ForwardAuthTarget string
+	ForwardAcctTarget string
 }
 
 func Load() Config {
@@ -51,6 +55,10 @@ func Load() Config {
 		EnableMDNS: envBool("URSA_TZSP_ENABLE_MDNS", true),
 		MDNSName:   env("URSA_TZSP_MDNS_NAME", "tzsp-radius-collector"),
 		MDNSPort:   envInt("URSA_TZSP_MDNS_PORT", 8098),
+
+		DBPath:            env("URSA_TZSP_DB_PATH", "./data/collector.db"),
+		ForwardAuthTarget: env("URSA_TZSP_FORWARD_AUTH_TARGET", "127.0.0.1:1812"),
+		ForwardAcctTarget: env("URSA_TZSP_FORWARD_ACCT_TARGET", "127.0.0.1:1813"),
 	}
 }
 

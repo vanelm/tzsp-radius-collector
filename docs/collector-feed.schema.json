@@ -22,7 +22,9 @@
       "description": "Capture source label.",
       "enum": [
         "tzsp_udp",
-        "raw_sniff"
+        "raw_sniff",
+        "synthetic",
+        "replay"
       ]
     },
     "remote_addr": {

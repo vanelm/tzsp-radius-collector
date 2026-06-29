@@ -11,12 +11,20 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/vanelm/tzsp-radius-collector/internal/api"
 	"github.com/vanelm/tzsp-radius-collector/internal/capture"
 	"github.com/vanelm/tzsp-radius-collector/internal/config"
 	"github.com/vanelm/tzsp-radius-collector/internal/discovery"
+	"github.com/vanelm/tzsp-radius-collector/internal/forwarder"
 	"github.com/vanelm/tzsp-radius-collector/internal/pipeline"
 	"github.com/vanelm/tzsp-radius-collector/internal/radiusdecode"
+	"github.com/vanelm/tzsp-radius-collector/internal/recorder"
+	"github.com/vanelm/tzsp-radius-collector/internal/replay"
+	"github.com/vanelm/tzsp-radius-collector/internal/runtime"
+	"github.com/vanelm/tzsp-radius-collector/internal/store"
 	"github.com/vanelm/tzsp-radius-collector/internal/stream"
+	"github.com/vanelm/tzsp-radius-collector/internal/synth"
+	"github.com/vanelm/tzsp-radius-collector/internal/webui"
 )
 
 func main() {
@@ -38,11 +46,27 @@ func main() {
 	}
 	logger.Info("dictionaries loaded", "count", len(files), "dictionary_glob", cfg.DictionaryGlob)
 
+	st, err := store.Open(cfg.DBPath)
+	if err != nil {
+		logger.Error("database open failed", "error", err, "db_path", cfg.DBPath)
+		os.Exit(1)
+	}
+	defer st.Close()
+
 	hub := stream.NewHub(slog.With("component", "stream_hub"), cfg.SlowConsumerQueue)
 	processor := pipeline.NewProcessor(dict, slog.With("component", "pipeline"))
+	fwd := forwarder.New(slog.With("component", "forwarder"), st, forwarder.Config{
+		AuthTarget: cfg.ForwardAuthTarget,
+		AcctTarget: cfg.ForwardAcctTarget,
+	})
+	rec := recorder.New(slog.With("component", "recorder"), st)
 
 	ctx, cancel := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer cancel()
+
+	orch := runtime.NewOrchestrator(slog.With("component", "orchestrator"), hub, processor, fwd, rec)
+	rep := replay.New(slog.With("component", "replay"), st, fwd, orch.Emit)
+	syn := synth.New(slog.With("component", "synth"), st, fwd, orch.Emit)
 
 	go hub.Run(ctx)
 
@@ -57,10 +81,14 @@ func main() {
 
 	events := make(chan pipeline.Event, cfg.EventQueue)
 	startCaptures(ctx, cfg, slog.With("component", "capture"), events)
-	go fanout(ctx, slog.With("component", "fanout"), hub, processor, events)
+	go orch.Run(ctx, events)
+
+	apiServer := api.New(slog.With("component", "api"), st, fwd, rec, rep, syn)
 
 	mux := http.NewServeMux()
 	stream.RegisterRoutes(mux, hub, cfg)
+	apiServer.RegisterRoutes(mux)
+	mux.Handle("/", webui.Handler())
 
 	srv := &http.Server{
 		Addr:         cfg.HTTPListen,
@@ -77,7 +105,7 @@ func main() {
 		_ = srv.Shutdown(shutdownCtx)
 	}()
 
-	logger.Info("http listening", "listen_addr", cfg.HTTPListen, "ws_path", cfg.WSPath, "app_env", cfg.AppEnv)
+	logger.Info("http listening", "listen_addr", cfg.HTTPListen, "ws_path", cfg.WSPath, "app_env", cfg.AppEnv, "db_path", cfg.DBPath)
 	if err := srv.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
 		logger.Error("http server failed", "error", err)
 		os.Exit(1)
@@ -92,23 +120,6 @@ func startCaptures(ctx context.Context, cfg config.Config, logger *slog.Logger, 
 	if cfg.EnableRawSniff {
 		sniffer := capture.NewRawSniffer(cfg, logger.With("mode", "raw_sniff"))
 		go sniffer.Run(ctx, out)
-	}
-}
-
-func fanout(ctx context.Context, logger *slog.Logger, hub *stream.Hub, processor *pipeline.Processor, in <-chan pipeline.Event) {
-	for {
-		select {
-		case <-ctx.Done():
-			return
-		case event := <-in:
-			msg, err := processor.Transform(event)
-			if err != nil {
-				logger.Debug("event transform skipped", "error", err, "source", event.Source)
-				continue
-			}
-			logger.Debug("packet decoded", "code", msg.Radius.CodeName, "source", event.Source, "attrs", len(msg.DecodedAttributes))
-			hub.Publish(msg)
-		}
 	}
 }
 
