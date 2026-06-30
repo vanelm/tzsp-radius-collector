@@ -18,6 +18,15 @@ func TestIsRequest(t *testing.T) {
 	}
 }
 
+func TestNASFallbackAddr(t *testing.T) {
+	if got := NASFallbackAddr(1, "10.0.33.15", "10.0.33.18"); got != "10.0.33.15" {
+		t.Fatalf("request fallback: got %q", got)
+	}
+	if got := NASFallbackAddr(2, "10.0.33.18", "10.0.33.15"); got != "10.0.33.15" {
+		t.Fatalf("response fallback: got %q", got)
+	}
+}
+
 func TestBuildAccessRequest(t *testing.T) {
 	raw, err := BuildAccessRequest(AccessRequestParams{
 		UserName:       "testuser",

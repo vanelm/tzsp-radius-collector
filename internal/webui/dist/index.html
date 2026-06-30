@@ -11,11 +11,11 @@
     <aside class="sidebar">
       <h1>RADIUS Harness</h1>
       <nav>
-        <button class="nav-btn active" data-tab="live">Live</button>
-        <button class="nav-btn" data-tab="forward">Forward</button>
-        <button class="nav-btn" data-tab="recordings">Recordings</button>
-        <button class="nav-btn" data-tab="catalog">Catalog</button>
-        <button class="nav-btn" data-tab="synthesize">Synthesize</button>
+        <button class="nav-btn btn active" data-tab="live">Live</button>
+        <button class="nav-btn btn" data-tab="forward">Forward</button>
+        <button class="nav-btn btn" data-tab="recordings">Recordings</button>
+        <button class="nav-btn btn" data-tab="catalog">Catalog</button>
+        <button class="nav-btn btn" data-tab="synthesize">Synthesize</button>
       </nav>
       <div class="status-box" id="status-box">Loading status...</div>
     </aside>
@@ -24,7 +24,7 @@
         <header>
           <h2>Live Feed</h2>
           <label><input type="checkbox" id="live-pause" /> Pause</label>
-          <button id="live-clear">Clear</button>
+          <button type="button" class="btn" id="live-clear">Clear</button>
         </header>
         <table>
           <thead><tr><th>Time</th><th>Source</th><th>Code</th><th>User</th><th>MAC</th><th>NAS</th></tr></thead>
@@ -38,7 +38,7 @@
           <label><input type="checkbox" id="fwd-enabled" /> Enabled</label>
           <label>Auth target <input id="fwd-auth" placeholder="127.0.0.1:1812" /></label>
           <label>Acct target <input id="fwd-acct" placeholder="127.0.0.1:1813" /></label>
-          <button type="submit">Save</button>
+          <button type="submit" class="btn">Save</button>
         </form>
         <p id="fwd-stats"></p>
       </section>
@@ -47,8 +47,8 @@
         <h2>Recordings</h2>
         <div class="row">
           <input id="rec-name" placeholder="Recording name" />
-          <button id="rec-start">Start</button>
-          <button id="rec-stop">Stop</button>
+          <button type="button" class="btn" id="rec-start">Start</button>
+          <button type="button" class="btn" id="rec-stop">Stop</button>
         </div>
         <table>
           <thead><tr><th>Name</th><th>Packets</th><th>Started</th><th>Actions</th></tr></thead>
@@ -59,11 +59,24 @@
           <label>Rate (RPS) <input type="number" id="replay-rate" value="10" min="0.1" step="0.1" /></label>
           <label><input type="checkbox" id="replay-timing" /> Preserve timing</label>
           <label><input type="checkbox" id="replay-loop" /> Loop</label>
-          <button id="replay-stop">Stop replay</button>
+          <button type="button" class="btn" id="replay-stop">Stop replay</button>
         </div>
       </section>
 
       <section id="tab-catalog" class="tab">
+        <div class="catalog-io row">
+          <button type="button" class="btn" id="catalog-export">Export JSON</button>
+          <button type="button" class="btn" id="catalog-import-btn">Import JSON</button>
+          <input type="file" id="catalog-import-file" accept=".json,application/json" hidden />
+          <label class="control-label">Mode
+            <select id="catalog-import-mode">
+              <option value="merge" selected>Merge</option>
+              <option value="replace">Replace</option>
+            </select>
+          </label>
+          <span id="catalog-import-status" class="muted"></span>
+        </div>
+
         <h2>NAS</h2>
         <form id="nas-form" class="form-grid">
           <input name="name" placeholder="Name" required />
@@ -71,7 +84,7 @@
           <input name="secret" placeholder="Secret" />
           <input name="vendor" placeholder="Vendor" />
           <input name="identifier" placeholder="Identifier" />
-          <button type="submit">Add NAS</button>
+          <button type="submit" class="btn">Add NAS</button>
         </form>
         <table><thead><tr><th>Name</th><th>IP</th><th>Vendor</th><th></th></tr></thead><tbody id="nas-rows"></tbody></table>
 
@@ -79,7 +92,7 @@
         <form id="client-form" class="form-grid">
           <input name="mac" placeholder="MAC" required />
           <input name="username" placeholder="Username" />
-          <button type="submit">Add Client</button>
+          <button type="submit" class="btn">Add Client</button>
         </form>
         <table><thead><tr><th>MAC</th><th>Username</th><th></th></tr></thead><tbody id="client-rows"></tbody></table>
       </section>
@@ -100,8 +113,8 @@
           <label>Sessions <input type="number" id="synth-sessions" value="3" min="1" /></label>
           <label>Interim interval (sec) <input type="number" id="synth-interim" value="60" min="1" /></label>
           <label>Session duration (sec) <input type="number" id="synth-duration" value="180" min="1" /></label>
-          <button type="submit">Run</button>
-          <button type="button" id="synth-stop">Stop</button>
+          <button type="submit" class="btn">Run</button>
+          <button type="button" class="btn" id="synth-stop">Stop</button>
         </form>
         <p id="synth-status"></p>
       </section>

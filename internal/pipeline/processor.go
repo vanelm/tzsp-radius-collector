@@ -55,8 +55,11 @@ func (p *Processor) Transform(event Event) (StreamMessage, error) {
 		})
 	}
 
-	if snapshot, ok := radiusdecode.BuildAccountingSnapshot(packet, p.dict, event.ReceivedAt.UTC()); ok {
+	nasFallback := radiusdecode.NASFallbackAddr(packet.Code, event.SrcAddr, event.DstAddr)
+	if snapshot, ok := radiusdecode.BuildAccountingSnapshot(packet, p.dict, event.ReceivedAt.UTC(), nasFallback); ok {
 		msg.Accounting = snapshot
+	} else if identity, ok := radiusdecode.BuildIdentitySnapshot(packet, p.dict, nasFallback); ok {
+		msg.Accounting = identity
 	}
 
 	return msg, nil

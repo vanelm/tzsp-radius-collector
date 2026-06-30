@@ -4,6 +4,7 @@ import (
 	"context"
 	"log/slog"
 
+	"github.com/vanelm/tzsp-radius-collector/internal/catalog"
 	"github.com/vanelm/tzsp-radius-collector/internal/forwarder"
 	"github.com/vanelm/tzsp-radius-collector/internal/pipeline"
 	"github.com/vanelm/tzsp-radius-collector/internal/radiusdecode"
@@ -17,6 +18,7 @@ type Orchestrator struct {
 	processor *pipeline.Processor
 	forwarder *forwarder.Forwarder
 	recorder  *recorder.Recorder
+	catalog   *catalog.Autofill
 }
 
 func NewOrchestrator(
@@ -25,6 +27,7 @@ func NewOrchestrator(
 	processor *pipeline.Processor,
 	fwd *forwarder.Forwarder,
 	rec *recorder.Recorder,
+	cat *catalog.Autofill,
 ) *Orchestrator {
 	return &Orchestrator{
 		logger:    logger,
@@ -32,6 +35,7 @@ func NewOrchestrator(
 		processor: processor,
 		forwarder: fwd,
 		recorder:  rec,
+		catalog:   cat,
 	}
 }
 
@@ -65,5 +69,8 @@ func (o *Orchestrator) process(event pipeline.Event) {
 		return
 	}
 	o.logger.Debug("packet decoded", "code", msg.Radius.CodeName, "source", event.Source, "attrs", len(msg.DecodedAttributes))
+	if o.catalog != nil {
+		o.catalog.Observe(msg)
+	}
 	o.hub.Publish(msg)
 }

@@ -45,6 +45,8 @@ func New(
 func (s *Server) RegisterRoutes(mux *http.ServeMux) {
 	mux.HandleFunc("/api/v1/status", s.handleStatus)
 	mux.HandleFunc("/api/v1/forwarder", s.handleForwarder)
+	mux.HandleFunc("/api/v1/catalog/export", s.handleCatalogExport)
+	mux.HandleFunc("/api/v1/catalog/import", s.handleCatalogImport)
 	mux.HandleFunc("/api/v1/nas", s.handleNASCollection)
 	mux.HandleFunc("/api/v1/nas/", s.handleNASItem)
 	mux.HandleFunc("/api/v1/clients", s.handleClientCollection)

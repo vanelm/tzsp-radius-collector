@@ -3,6 +3,7 @@ package store
 import (
 	"database/sql"
 	"fmt"
+	"strings"
 )
 
 type NAS struct {
@@ -96,4 +97,38 @@ func (s *Store) DeleteNAS(id string) error {
 		return fmt.Errorf("nas not found")
 	}
 	return nil
+}
+
+func (s *Store) EnsureNAS(ip, identifier, vendor string) error {
+	ip = strings.TrimSpace(ip)
+	if ip == "" {
+		return nil
+	}
+	name := strings.TrimSpace(identifier)
+	if name == "" {
+		name = ip
+	}
+	identifier = strings.TrimSpace(identifier)
+	vendor = strings.TrimSpace(vendor)
+
+	var id string
+	err := s.db.QueryRow(`SELECT id FROM nas WHERE ip = ?`, ip).Scan(&id)
+	if err == nil {
+		_, err = s.db.Exec(`
+			UPDATE nas SET
+				name = CASE WHEN name = ip AND ? != '' THEN ? ELSE name END,
+				identifier = CASE WHEN identifier = '' AND ? != '' THEN ? ELSE identifier END,
+				vendor = CASE WHEN vendor = '' AND ? != '' THEN ? ELSE vendor END
+			WHERE id = ?
+		`, name, name, identifier, identifier, vendor, vendor, id)
+		return err
+	}
+	if err != sql.ErrNoRows {
+		return err
+	}
+	_, err = s.db.Exec(`
+		INSERT INTO nas (id, name, ip, secret, vendor, identifier, auth_port, acct_port, notes, created_at)
+		VALUES (?, ?, ?, '', ?, ?, 1812, 1813, '', ?)
+	`, newID(), name, ip, vendor, identifier, NowUTC())
+	return err
 }

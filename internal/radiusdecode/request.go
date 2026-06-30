@@ -22,3 +22,13 @@ func RequestPort(code uint8) int {
 	}
 	return PortAuth
 }
+
+// NASFallbackAddr returns the UDP endpoint most likely to be the NAS when
+// NAS-IP-Address is missing from the RADIUS attributes.
+// Requests are sent by the NAS (src); responses are sent to the NAS (dst).
+func NASFallbackAddr(code uint8, srcAddr, dstAddr string) string {
+	if IsRequestCode(code) {
+		return srcAddr
+	}
+	return dstAddr
+}

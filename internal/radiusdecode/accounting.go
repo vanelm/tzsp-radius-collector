@@ -2,18 +2,13 @@ package radiusdecode
 
 import "time"
 
-func BuildAccountingSnapshot(packet *Packet, dict *AttributeDictionary, now time.Time) (map[string]any, bool) {
+func BuildAccountingSnapshot(packet *Packet, dict *AttributeDictionary, now time.Time, nasFallback string) (map[string]any, bool) {
 	if packet == nil || packet.Code != 4 {
 		return nil, false
 	}
-	decoded := DecodePacketAttributes(packet, dict)
-	if len(decoded) == 0 {
+	attrs := collectAttributeValues(packet, dict)
+	if len(attrs) == 0 {
 		return nil, false
-	}
-
-	attrs := map[string][]string{}
-	for _, attr := range decoded {
-		attrs[attr.Name] = append(attrs[attr.Name], attr.ValueText)
 	}
 
 	status := first(attrs, "Acct-Status-Type")
@@ -21,24 +16,21 @@ func BuildAccountingSnapshot(packet *Packet, dict *AttributeDictionary, now time
 		status = first(attrs, "Attr-40")
 	}
 
-	mac := NormalizeMAC(first(attrs, "Calling-Station-Id"))
-	if mac == "" {
-		mac = NormalizeMAC(first(attrs, "Attr-31"))
-	}
-	if mac == "" {
+	identity, ok := BuildIdentitySnapshot(packet, dict, nasFallback)
+	if !ok {
 		return nil, false
 	}
 
 	snapshot := map[string]any{
-		"mac":                   mac,
+		"mac":                   identity["mac"],
 		"status_type":           status,
 		"acct_session_id":       first(attrs, "Acct-Session-Id"),
 		"acct_multi_session_id": first(attrs, "Acct-Multi-Session-Id"),
-		"user_name":             first(attrs, "User-Name"),
-		"calling_station_id":    first(attrs, "Calling-Station-Id"),
-		"called_station_id":     first(attrs, "Called-Station-Id"),
-		"nas":                   first(attrs, "NAS-IP-Address"),
-		"nas_identifier":        first(attrs, "NAS-Identifier"),
+		"user_name":             identity["user_name"],
+		"calling_station_id":    identity["calling_station_id"],
+		"called_station_id":     identity["called_station_id"],
+		"nas":                   identity["nas"],
+		"nas_identifier":        identity["nas_identifier"],
 		"session_time_sec":      parseUintFromText(first(attrs, "Acct-Session-Time")),
 		"input_octets":          parseUintFromText(first(attrs, "Acct-Input-Octets")),
 		"output_octets":         parseUintFromText(first(attrs, "Acct-Output-Octets")),
@@ -48,8 +40,7 @@ func BuildAccountingSnapshot(packet *Packet, dict *AttributeDictionary, now time
 		"last_event_at":         now.UTC().Format(time.RFC3339),
 	}
 
-	vendor := detectNASVendor(decoded)
-	if vendor != "" {
+	if vendor, _ := identity["nas_vendor"].(string); vendor != "" {
 		snapshot["nas_vendor"] = vendor
 	}
 	if framedIP := first(attrs, "Framed-IP-Address"); framedIP != "" {

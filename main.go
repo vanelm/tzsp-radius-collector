@@ -13,6 +13,7 @@ import (
 
 	"github.com/vanelm/tzsp-radius-collector/internal/api"
 	"github.com/vanelm/tzsp-radius-collector/internal/capture"
+	"github.com/vanelm/tzsp-radius-collector/internal/catalog"
 	"github.com/vanelm/tzsp-radius-collector/internal/config"
 	"github.com/vanelm/tzsp-radius-collector/internal/discovery"
 	"github.com/vanelm/tzsp-radius-collector/internal/forwarder"
@@ -64,7 +65,7 @@ func main() {
 	ctx, cancel := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer cancel()
 
-	orch := runtime.NewOrchestrator(slog.With("component", "orchestrator"), hub, processor, fwd, rec)
+	orch := runtime.NewOrchestrator(slog.With("component", "orchestrator"), hub, processor, fwd, rec, catalog.NewAutofill(slog.With("component", "catalog"), st))
 	rep := replay.New(slog.With("component", "replay"), st, fwd, orch.Emit)
 	syn := synth.New(slog.With("component", "synth"), st, fwd, orch.Emit)
 

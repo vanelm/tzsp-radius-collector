@@ -3,6 +3,7 @@ package store
 import (
 	"database/sql"
 	"fmt"
+	"strings"
 )
 
 type Client struct {
@@ -81,4 +82,28 @@ func (s *Store) DeleteClient(id string) error {
 		return fmt.Errorf("client not found")
 	}
 	return nil
+}
+
+func (s *Store) EnsureClient(mac, username string) error {
+	mac = strings.TrimSpace(mac)
+	if mac == "" {
+		return nil
+	}
+	username = strings.TrimSpace(username)
+
+	var id, existingUser string
+	err := s.db.QueryRow(`SELECT id, username FROM clients WHERE mac = ?`, mac).Scan(&id, &existingUser)
+	if err == nil {
+		if username != "" && strings.TrimSpace(existingUser) == "" {
+			_, err = s.db.Exec(`UPDATE clients SET username = ? WHERE id = ?`, username, id)
+		}
+		return err
+	}
+	if err != sql.ErrNoRows {
+		return err
+	}
+	_, err = s.db.Exec(`
+		INSERT INTO clients (id, mac, username, notes, created_at) VALUES (?, ?, ?, '', ?)
+	`, newID(), mac, username, NowUTC())
+	return err
 }

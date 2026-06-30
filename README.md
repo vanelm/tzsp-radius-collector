@@ -56,6 +56,8 @@ Base path: `/api/v1/`
 | GET | `/status` | Forwarder, recorder, replay, synth state |
 | GET/PUT | `/forwarder` | Forwarder config |
 | CRUD | `/nas`, `/clients` | Catalog |
+| GET | `/catalog/export` | Export NAS + clients as JSON |
+| POST | `/catalog/import` | Import catalog (`mode`: `merge` or `replace`) |
 | GET | `/recordings` | List recordings |
 | POST | `/recordings/start`, `/recordings/stop` | Recording control |
 | GET/DELETE | `/recordings/{id}` | Recording detail |

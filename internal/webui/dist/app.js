@@ -12,8 +12,35 @@ const api = (path, opts = {}) => fetch(path, {
 
 let selectedRecordingId = null;
 let ws = null;
+let recordingActive = false;
+let recordingsPollTimer = null;
+let catalogPollTimer = null;
 
 function $(id) { return document.getElementById(id); }
+
+function isTabActive(name) {
+  return $(`tab-${name}`)?.classList.contains('active');
+}
+
+function scheduleRecordingsPoll() {
+  const shouldPoll = isTabActive('recordings') || recordingActive;
+  if (shouldPoll && !recordingsPollTimer) {
+    recordingsPollTimer = setInterval(loadRecordings, 1000);
+  } else if (!shouldPoll && recordingsPollTimer) {
+    clearInterval(recordingsPollTimer);
+    recordingsPollTimer = null;
+  }
+}
+
+function scheduleCatalogPoll() {
+  const shouldPoll = isTabActive('catalog') || isTabActive('synthesize');
+  if (shouldPoll && !catalogPollTimer) {
+    catalogPollTimer = setInterval(loadCatalog, 2000);
+  } else if (!shouldPoll && catalogPollTimer) {
+    clearInterval(catalogPollTimer);
+    catalogPollTimer = null;
+  }
+}
 
 function switchTab(name) {
   document.querySelectorAll('.nav-btn').forEach((b) => b.classList.toggle('active', b.dataset.tab === name));
@@ -21,6 +48,8 @@ function switchTab(name) {
   if (name === 'catalog' || name === 'synthesize') loadCatalog();
   if (name === 'recordings') loadRecordings();
   if (name === 'forward') loadForwarder();
+  scheduleRecordingsPoll();
+  scheduleCatalogPoll();
 }
 
 document.querySelectorAll('.nav-btn').forEach((btn) => {
@@ -30,6 +59,7 @@ document.querySelectorAll('.nav-btn').forEach((btn) => {
 async function refreshStatus() {
   try {
     const s = await api('/api/v1/status');
+    recordingActive = s.recorder.active;
     $('status-box').textContent =
       `Forward: ${s.forwarder.config.enabled ? 'ON' : 'off'} (${s.forwarder.forwarded_total} sent, ${s.forwarder.forward_errors} err)\n` +
       `Record: ${s.recorder.active ? 'REC ' + s.recorder.recording_id.slice(0, 8) : 'idle'}\n` +
@@ -37,6 +67,7 @@ async function refreshStatus() {
       `Synth: ${s.synth.active ? s.synth.sent + ' sent' : 'idle'}`;
     $('fwd-stats').textContent = `Forwarded: ${s.forwarder.forwarded_total}, errors: ${s.forwarder.forward_errors}`;
     $('synth-status').textContent = s.synth.active ? `Running, sent ${s.synth.sent}` : 'Idle';
+    scheduleRecordingsPoll();
   } catch (e) {
     $('status-box').textContent = 'Status unavailable';
   }
@@ -91,8 +122,8 @@ async function loadRecordings() {
     <tr>
       <td>${r.name}</td><td>${r.packet_count}</td><td>${new Date(r.started_at).toLocaleString()}</td>
       <td>
-        <button data-replay="${r.id}">Replay</button>
-        <button data-del="${r.id}" class="danger">Delete</button>
+        <button type="button" class="btn" data-replay="${r.id}">Replay</button>
+        <button type="button" class="btn btn-danger" data-del="${r.id}">Delete</button>
       </td>
     </tr>`).join('');
   $('rec-rows').querySelectorAll('[data-replay]').forEach((b) => {
@@ -133,8 +164,8 @@ $('replay-stop').onclick = async () => { await api('/api/v1/replay/stop', { meth
 
 async function loadCatalog() {
   const [nas, clients] = await Promise.all([api('/api/v1/nas'), api('/api/v1/clients')]);
-  $('nas-rows').innerHTML = nas.map((n) => `<tr><td>${n.name}</td><td>${n.ip}</td><td>${n.vendor}</td><td><button data-del-nas="${n.id}" class="danger">Delete</button></td></tr>`).join('');
-  $('client-rows').innerHTML = clients.map((c) => `<tr><td>${c.mac}</td><td>${c.username}</td><td><button data-del-client="${c.id}" class="danger">Delete</button></td></tr>`).join('');
+  $('nas-rows').innerHTML = nas.map((n) => `<tr><td>${n.name}</td><td>${n.ip}</td><td>${n.vendor}</td><td><button type="button" class="btn btn-danger" data-del-nas="${n.id}">Delete</button></td></tr>`).join('');
+  $('client-rows').innerHTML = clients.map((c) => `<tr><td>${c.mac}</td><td>${c.username}</td><td><button type="button" class="btn btn-danger" data-del-client="${c.id}">Delete</button></td></tr>`).join('');
   $('nas-rows').querySelectorAll('[data-del-nas]').forEach((b) => {
     b.onclick = async () => { await api(`/api/v1/nas/${b.dataset.delNas}`, { method: 'DELETE' }); loadCatalog(); };
   });
@@ -159,6 +190,52 @@ $('client-form').onsubmit = async (e) => {
   await api('/api/v1/clients', { method: 'POST', body: JSON.stringify(Object.fromEntries(fd)) });
   e.target.reset();
   loadCatalog();
+};
+
+$('catalog-export').onclick = async () => {
+  const r = await fetch('/api/v1/catalog/export');
+  if (!r.ok) {
+    const err = await r.json().catch(() => ({}));
+    alert(err.error || 'Export failed');
+    return;
+  }
+  const blob = await r.blob();
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  const stamp = new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19);
+  a.href = url;
+  a.download = `radius-catalog-${stamp}.json`;
+  a.click();
+  URL.revokeObjectURL(url);
+};
+
+$('catalog-import-btn').onclick = () => $('catalog-import-file').click();
+
+$('catalog-import-file').onchange = async (ev) => {
+  const file = ev.target.files?.[0];
+  ev.target.value = '';
+  if (!file) return;
+  const status = $('catalog-import-status');
+  status.textContent = 'Importing...';
+  status.className = 'muted';
+  try {
+    const text = await file.text();
+    const payload = JSON.parse(text);
+    if (!payload.mode) {
+      payload.mode = $('catalog-import-mode').value;
+    }
+    const result = await api('/api/v1/catalog/import', {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    });
+    status.textContent =
+      `Imported: NAS +${result.nas_created}/~${result.nas_updated}, clients +${result.clients_created}/~${result.clients_updated}`;
+    status.className = 'ok';
+    loadCatalog();
+  } catch (e) {
+    status.textContent = e.message || 'Import failed';
+    status.className = 'danger';
+  }
 };
 
 $('synth-form').onsubmit = async (e) => {

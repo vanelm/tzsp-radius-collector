@@ -16,11 +16,11 @@ VENDOR		Symbol				388
 
 BEGIN-VENDOR	Symbol
 
-ATTRIBUTE	Symbol-Admin-Role			1	integer
+ATTRIBUTE	Symbol-Admin-Role			1	integer	# WING: Symbol-Service-Type
 
 VALUE	Symbol-Admin-Role		Monitor				1
 VALUE	Symbol-Admin-Role		Helpdesk			2
-VALUE	Symbol-Admin-Role		NetworkAdmin			4
+VALUE	Symbol-Admin-Role		NetworkAdmin		4
 VALUE	Symbol-Admin-Role		SysAdmin			8
 VALUE	Symbol-Admin-Role		WebAdmin			16
 VALUE	Symbol-Admin-Role		Security			32
@@ -29,34 +29,45 @@ VALUE	Symbol-Admin-Role		SuperUser			32768
 
 ATTRIBUTE	Symbol-Current-ESSID			2	string
 ATTRIBUTE	Symbol-Allowed-ESSID			3	string
-ATTRIBUTE	Symbol-WLAN-Index			4	integer
-ATTRIBUTE	Symbol-QoS-Profile			5	integer
+ATTRIBUTE	Symbol-WLAN-Index			    4	integer	# WING: deprecated, use Symbol-Allowed-ESSID
+ATTRIBUTE	Symbol-QoS-Profile			    5	integer
 
 VALUE	Symbol-QoS-Profile		BestEffort		1
 VALUE	Symbol-QoS-Profile		Background		2
 VALUE	Symbol-QoS-Profile		Video			3
 VALUE	Symbol-QoS-Profile		Voice			4
 
-ATTRIBUTE	Symbol-Allowed-Radio		6	string
-ATTRIBUTE	Symbol-Expiry-Date-Time		7	string	# Format: MM/DD/YYYY-HH:MM
-ATTRIBUTE	Symbol-Start-Date-Time		8	string	# Format: MM/DD/YYYY-HH:MM
-ATTRIBUTE	Symbol-Posture-Status		9	string
-ATTRIBUTE	Symbol-Downlink-Limit		10	string	# Format: 100-10000 (Kbps), 0 = Disabled
-ATTRIBUTE	Symbol-Uplink-Limit			11	string	# Format: 100-10000 (Kbps), 0 = Disabled
-ATTRIBUTE	Symbol-User-Group			12	string
-ATTRIBUTE	Symbol-User-Device			13	string
-ATTRIBUTE	Symbol-User-OS  			14	string
-ATTRIBUTE	Symbol-User-Browser			15	string
-ATTRIBUTE	Symbol-Device-Hostname		17	string	# Accounting attribute
-ATTRIBUTE	Symbol-Device-IP			18	string	# Accounting attribute
-ATTRIBUTE	Symbol-Device-MAC			19	string	# Accounting attribute
-ATTRIBUTE	Symbol-VLAN-Name			22	string	# Format: $ALIASNAME
-ATTRIBUTE	Symbol-Application-Policy	31	string
-ATTRIBUTE	Symbol-Device-RF-Domain		32	string	# Accounting attribute
-ATTRIBUTE	Symbol-Allowed-Locations	33	string
-ATTRIBUTE	Symbol-WLAN-Name		    35	string
+ATTRIBUTE	Symbol-Allowed-Radio		    6	string
+ATTRIBUTE	Symbol-Expiry-Date-Time		    7	string	# Format: MM/DD/YYYY-HH:MM; WING: Guest-User-Expiry-Date-Time
+ATTRIBUTE	Symbol-Start-Date-Time		    8	string	# Format: MM/DD/YYYY-HH:MM; WING: Guest-User-Start-Date-Time
+ATTRIBUTE	Symbol-Posture-Status		    9	string
+ATTRIBUTE	Symbol-Downlink-Limit		    10	integer	# Kbps, 0 = disabled; WING: Symbol-Downlink-Limit-Kbps
+ATTRIBUTE	Symbol-Uplink-Limit			    11	integer	# Kbps, 0 = disabled; WING: Symbol-Uplink-Limit-Kbps
+ATTRIBUTE	Symbol-User-Group			    12	string
+ATTRIBUTE	Symbol-User-Device			    13	string	# WING: Symbol-User-Device-Type
+ATTRIBUTE	Symbol-User-OS  			    14	string
+ATTRIBUTE	Symbol-User-Browser			    15	string
+ATTRIBUTE	Symbol-Device-Hostname		    17	string	# Accounting attribute; WING: Symbol-AP-Name
+ATTRIBUTE	Symbol-Device-IP			    18	string	# Accounting attribute; WING: Symbol-AP-IP-Address
+ATTRIBUTE	Symbol-Device-MAC			    19	string	# Accounting attribute; WING: Symbol-AP-MAC-Address
+ATTRIBUTE	Symbol-User-Login-Info		    20	string	# (guest details / username)
+ATTRIBUTE	Symbol-User-Last-Login-Time		21	integer	# Seconds since last login
+ATTRIBUTE	Symbol-VLAN-Name                22	string	# Format: $ALIASNAME
+ATTRIBUTE	Symbol-Reduced-Downlink-Limit	23	integer # Kbps, 0 = disabled; WING: Symbol-Reduced-Downlink-Limit-Kbps
+ATTRIBUTE	Symbol-Reduced-Uplink-Limit     24	integer # Kbps, 0 = disabled; WING: Symbol-Reduced-Uplink-Limit-Kbps
+ATTRIBUTE	Symbol-Data-Limit-Bytes			25	integer
+ATTRIBUTE	Symbol-Data-Limit-Gigawords		26	integer
+ATTRIBUTE	Symbol-Data-Bytes-Remaining		27	integer
+ATTRIBUTE	Symbol-Data-Gigawords-Remaining	28	integer
+ATTRIBUTE	Symbol-Committed-Downlink-Limit	29	integer # Kbps, 0 = disabled; WING: Symbol-Committed-Downlink-Limit-Kbps
+ATTRIBUTE	Symbol-Committed-Uplink-Limit	30	integer # Kbps, 0 = disabled; WING: Symbol-Committed-Uplink-Limit-Kbps
+ATTRIBUTE	Symbol-Application-Policy		31	string	# WING: Symbol-App-Policy-Name
+ATTRIBUTE	Symbol-Device-RF-Domain			32	string	# Accounting attribute
+ATTRIBUTE	Symbol-Allowed-Locations		33	string	# WING: Symbol-NSight-Allowed-Location
+ATTRIBUTE	Symbol-User-Block-Time			34	integer
+ATTRIBUTE	Symbol-WLAN-Name			    35	string
 
-ATTRIBUTE	Symbol-Login-Source			100	integer
+ATTRIBUTE	Symbol-Login-Source			    100	integer	# WING: Symbol-Login-Service
 
 VALUE	Symbol-Login-Source		HTTP			16
 VALUE	Symbol-Login-Source		SSH			32
