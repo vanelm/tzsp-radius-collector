@@ -36,6 +36,10 @@ func StartMDNS(cfg config.Config, logger *slog.Logger) (*Handle, error) {
 		"ws_path=" + cfg.WSPath,
 		"capture_modes=" + captureModes(cfg),
 		"service=tzsp-radius-collector",
+		"feed_type=" + cfg.FeedType,
+		"feed_version=" + cfg.FeedVersion,
+		"schema_id=" + cfg.SchemaID,
+		"collector_id=" + cfg.CollectorID,
 	}
 
 	server, err := zeroconf.Register(instance, "_tzsp_collector._tcp", "local.", cfg.MDNSPort, meta, nil)

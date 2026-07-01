@@ -20,6 +20,10 @@ Small collector that ingests TZSP and raw-sniffed RADIUS traffic, decodes attrib
 All service variables are URSA-prefixed:
 
 - `URSA_TZSP_HTTP_LISTEN` default `:8098`
+- `URSA_COLLECTOR_ID` default `tzsp-radius-collector` (WebSocket hello + mDNS)
+- `URSA_COLLECTOR_FEED_TYPE` default `radius`
+- `URSA_COLLECTOR_FEED_VERSION` default `1`
+- `URSA_COLLECTOR_SCHEMA_ID` default collector-feed schema URL
 - `URSA_TZSP_WS_PATH` default `/ws`
 - `URSA_APP_ENV` default `development`
 - `URSA_LOG_LEVEL` optional override (`debug`, `info`, `warn`, `error`)
@@ -68,7 +72,20 @@ Base path: `/api/v1/`
 
 ## WebSocket
 
-Connect to `ws://host:8098/ws` and send:
+Connect to `ws://host:8098/ws`. The server sends a `hello` handshake as the first message:
+
+```json
+{
+  "type": "hello",
+  "feed_type": "radius",
+  "feed_version": "1",
+  "schema_id": "https://vanelm.github.io/tzsp-radius-collector/schemas/collector-feed.schema.json",
+  "collector_id": "tzsp-radius-collector",
+  "capabilities": ["filter.codes", "filter.macs", "..."]
+}
+```
+
+Then send a subscription:
 
 ```json
 {"action":"subscribe","filter":{"codes":["Accounting-Request"],"macs":["AA:BB:CC:DD:EE:FF"]}}

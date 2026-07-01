@@ -29,11 +29,11 @@ func RegisterRoutes(mux *http.ServeMux, hub *Hub, cfg config.Config) {
 		_, _ = w.Write([]byte(`{"ok":true}`))
 	})
 	mux.HandleFunc(cfg.WSPath, func(w http.ResponseWriter, r *http.Request) {
-		handleWS(hub, w, r)
+		handleWS(hub, w, r, cfg)
 	})
 }
 
-func handleWS(hub *Hub, w http.ResponseWriter, r *http.Request) {
+func handleWS(hub *Hub, w http.ResponseWriter, r *http.Request, cfg config.Config) {
 	conn, err := upgrader.Upgrade(w, r, nil)
 	if err != nil {
 		return
@@ -43,6 +43,14 @@ func handleWS(hub *Hub, w http.ResponseWriter, r *http.Request) {
 	id := strings.ReplaceAll(time.Now().UTC().Format(time.RFC3339Nano), ":", "")
 	client := hub.Add(id)
 	defer hub.Remove(id)
+
+	hello, err := MarshalHello(cfg)
+	if err != nil {
+		return
+	}
+	if err := conn.WriteMessage(websocket.TextMessage, hello); err != nil {
+		return
+	}
 
 	conn.SetReadDeadline(time.Now().Add(60 * time.Second))
 	conn.SetPongHandler(func(string) error {

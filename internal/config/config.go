@@ -6,11 +6,21 @@ import (
 	"strings"
 )
 
+const (
+	DefaultFeedType    = "radius"
+	DefaultFeedVersion = "1"
+	DefaultSchemaID    = "https://vanelm.github.io/tzsp-radius-collector/schemas/collector-feed.schema.json"
+)
+
 type Config struct {
 	AppEnv            string
 	LogLevel          string
 	HTTPListen        string
 	WSPath            string
+	CollectorID       string
+	FeedType          string
+	FeedVersion       string
+	SchemaID          string
 	EventQueue        int
 	SlowConsumerQueue int
 
@@ -39,6 +49,10 @@ func Load() Config {
 		LogLevel:          env("URSA_LOG_LEVEL", ""),
 		HTTPListen:        env("URSA_TZSP_HTTP_LISTEN", ":8098"),
 		WSPath:            env("URSA_TZSP_WS_PATH", "/ws"),
+		CollectorID:       env("URSA_COLLECTOR_ID", env("URSA_TZSP_MDNS_NAME", "tzsp-radius-collector")),
+		FeedType:          env("URSA_COLLECTOR_FEED_TYPE", DefaultFeedType),
+		FeedVersion:       env("URSA_COLLECTOR_FEED_VERSION", DefaultFeedVersion),
+		SchemaID:          env("URSA_COLLECTOR_SCHEMA_ID", DefaultSchemaID),
 		EventQueue:        envInt("URSA_TZSP_EVENT_QUEUE", 1024),
 		SlowConsumerQueue: envInt("URSA_TZSP_CLIENT_QUEUE", 128),
 

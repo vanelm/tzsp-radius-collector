@@ -80,6 +80,7 @@ function connectWS() {
   ws.onmessage = (ev) => {
     if ($('live-pause').checked) return;
     const msg = JSON.parse(ev.data);
+    if (msg.type === 'hello') return;
     addLiveRow(msg);
   };
   ws.onclose = () => setTimeout(connectWS, 2000);
