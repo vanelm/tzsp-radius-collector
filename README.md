@@ -15,7 +15,7 @@ Project docs (architecture, config, API, WebSocket, harness, operations):
 - Dictionary-based attribute decode (standard + VSA)
 - Accounting snapshot extraction
 - WebSocket stream endpoint with subscription filters
-- **RADIUS test harness**: verbatim UDP forwarding, request recording/replay, NAS/client catalog, synthetic traffic generation
+- **RADIUS test harness**: RADIUS request proxy with conversations, request recording/replay, NAS/client catalog, synthetic traffic generation
 - Embedded web UI at `/` (English)
 - REST API at `/api/v1/`
 - mDNS advertisement on `_tzsp_collector._tcp`
@@ -52,7 +52,7 @@ All service variables are URSA-prefixed:
 Open `http://host:8098/` for the test harness UI:
 
 - **Live** — WebSocket feed viewer
-- **Forward** — enable/disable verbatim RADIUS request forwarding
+- **Forward** — RADIUS request proxy: rewrite NAS-IP so replies return here, browse conversations
 - **Recordings** — record, replay (rate or preserved timing), delete
 - **Catalog** — manage NAS and client (MAC) entries
 - **Synthesize** — generate auth/accounting sessions from catalog data
@@ -65,6 +65,7 @@ Base path: `/api/v1/`
 |--------|------|-------------|
 | GET | `/status` | Forwarder, recorder, replay, synth state |
 | GET/PUT | `/forwarder` | Forwarder config |
+| GET/DELETE | `/forwarder/conversations` | Forwarded request/response pairs |
 | CRUD | `/nas`, `/clients` | Catalog |
 | GET | `/catalog/export` | Export NAS + clients as JSON |
 | POST | `/catalog/import` | Import catalog (`mode`: `merge` or `replace`) |

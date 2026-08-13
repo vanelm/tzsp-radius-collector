@@ -247,6 +247,69 @@ button.btn-danger {
   font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
 }
 
+.fwd-conv-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  margin: 1rem 0 0.5rem;
+}
+
+.fwd-conv-header h3 {
+  margin: 0;
+}
+
+#fwd-conv-rows tr {
+  cursor: pointer;
+}
+
+#fwd-conv-rows tr:hover td {
+  background: #1a2433;
+}
+
+#fwd-conv-rows tr.selected td {
+  background: #243044;
+  box-shadow: inset 2px 0 0 var(--accent);
+}
+
+.status-pill {
+  display: inline-block;
+  font-size: 0.75rem;
+  padding: 0.1rem 0.4rem;
+  border-radius: 999px;
+  border: 1px solid var(--border);
+  color: var(--muted);
+}
+
+.status-pill.complete,
+.status-pill.accept {
+  color: var(--ok);
+  border-color: var(--ok);
+}
+
+.status-pill.reject,
+.status-pill.error {
+  color: var(--danger);
+  border-color: var(--danger);
+}
+
+.status-pill.pending,
+.status-pill.timeout,
+.status-pill.challenge {
+  color: var(--muted);
+}
+
+.fwd-pkt-tabs {
+  display: flex;
+  gap: 0.35rem;
+  margin-bottom: 0.75rem;
+}
+
+.fwd-pkt-tabs .btn.active {
+  border-color: var(--accent);
+  background: #243044;
+}
+
 @media (max-width: 900px) {
   .live-layout.inspector-open {
     grid-template-columns: 1fr;

@@ -16,6 +16,22 @@ func IsRequest(raw []byte) bool {
 	return IsRequestCode(raw[0])
 }
 
+func IsResponseCode(code uint8) bool {
+	switch code {
+	case 2, 3, 5, 11:
+		return true
+	default:
+		return false
+	}
+}
+
+func IsResponse(raw []byte) bool {
+	if len(raw) < 1 {
+		return false
+	}
+	return IsResponseCode(raw[0])
+}
+
 func RequestPort(code uint8) int {
 	if code == 4 {
 		return PortAcct

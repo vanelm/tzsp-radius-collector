@@ -4,12 +4,13 @@ Harness живёт в том же процессе, что и коллектор
 
 ## Forward
 
-`internal/forwarder`: verbatim UDP send **только request**-пакетов (Access-Request code 1 → auth target, Accounting-Request code 4 → acct target).
+`internal/forwarder`: UDP proxy для **request**-пакетов (Access-Request code 1 → auth target, Accounting-Request code 4 → acct target).
 
 - По умолчанию **`enabled: false`**.
 - Defaults targets из env; runtime-конфиг в `settings`.
-- Authenticator **не** пересчитывается — байты как есть.
-- Ответы RADIUS не форвардятся и не ожидаются.
+- Держит постоянные UDP-сокеты и **ждёт ответы**. Request+response склеиваются в conversation (по identifier, таймаут 5s).
+- Исходящий запрос уходит с IP/порта харнесса; **NAS-IP-Address** подменяется на локальный адрес сокета, чтобы сервер отвечал сюда (Access-Request без Message-Authenticator — всегда; Accounting / Message-Authenticator — если в каталоге NAS есть secret, пакет переподписывается).
+- Ответы появляются в UI Forward и в Live-ленте (`source: forward-response`).
 
 Replay и synth вызывают `ForwardBytes` → тот же путь `MaybeForward`. Если форвардер выключен, UDP **не** уходит; при `mirror_to_stream` пакеты всё равно появляются в WebSocket.
 
@@ -47,7 +48,7 @@ Patterns:
 
 Параметры: rate, число сессий, interim interval, session duration, `mirror_to_stream`.
 
-Секреты NAS используются при сборке пакетов там, где библиотека их требует; при forward наружу пакеты всё равно уходят как собранные байты без повторного «подписания» под чужой секрет на стороне forwarder.
+Секреты NAS из каталога используются при сборке synth-пакетов и при forward: Accounting-Request / Message-Authenticator переподписываются, если secret найден по NAS-IP.
 
 ## SQLite схема
 

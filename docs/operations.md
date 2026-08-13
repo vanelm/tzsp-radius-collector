@@ -57,7 +57,7 @@ avahi-browse -art | grep tzsp_collector
 1. **`URSA_TZSP_SNIFF_FILTER` не применяется** — BPF не ставится; весь UDP с iface читается, отбор эвристикой RADIUS.
 2. **Promiscuous mode не работает** на текущем afpacket-бэкенде.
 3. **Forwarder off by default** — replay/synth без включения forward не шлют UDP наружу.
-4. **Verbatim authenticator** — нет пересчёта Response/Request Authenticator при forward.
+4. **Forwarder off by default** — replay/synth без включения forward не шлют UDP наружу. Включённый forwarder держит UDP-сокеты, переписывает NAS-IP и ждёт ответы (таймаут 5s).
 5. Schema vs runtime: в событиях есть `src_addr`/`dst_addr` (отражено в `docs/collector-feed.schema.json`).
 6. Медленные WS-клиенты отключаются при переполнении клиентской очереди.
 7. **Docker/CGO=0**: AF_PACKET raw sniff недоступен; используйте TZSP UDP.

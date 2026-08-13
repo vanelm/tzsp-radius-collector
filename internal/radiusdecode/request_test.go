@@ -16,6 +16,9 @@ func TestIsRequest(t *testing.T) {
 	if RequestPort(4) != PortAcct || RequestPort(1) != PortAuth {
 		t.Fatal("unexpected request ports")
 	}
+	if !IsResponseCode(2) || !IsResponseCode(5) || IsResponseCode(1) {
+		t.Fatal("unexpected response code classification")
+	}
 }
 
 func TestNASFallbackAddr(t *testing.T) {

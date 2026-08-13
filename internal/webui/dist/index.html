@@ -54,7 +54,44 @@
           <label>Acct target <input id="fwd-acct" placeholder="127.0.0.1:1813" /></label>
           <button type="submit" class="btn">Save</button>
         </form>
-        <p id="fwd-stats"></p>
+        <p id="fwd-stats" class="muted"></p>
+        <p id="fwd-bind" class="muted"></p>
+        <p class="muted">Requests are sent from this host (NAS-IP rewritten when possible) so the RADIUS server replies here. Conversations pair each request with its response.</p>
+
+        <div class="fwd-conv-header">
+          <h3>Conversations</h3>
+          <button type="button" class="btn" id="fwd-conv-clear">Clear</button>
+        </div>
+        <div class="live-layout" id="fwd-layout">
+          <div class="live-table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th>Time</th>
+                  <th>Ch</th>
+                  <th>Request</th>
+                  <th>Response</th>
+                  <th>User</th>
+                  <th>MAC</th>
+                  <th>NAS</th>
+                  <th>RTT</th>
+                  <th>Status</th>
+                </tr>
+              </thead>
+              <tbody id="fwd-conv-rows"></tbody>
+            </table>
+          </div>
+          <aside id="fwd-inspector" class="packet-inspector hidden" aria-hidden="true">
+            <div class="inspector-header">
+              <h3>Conversation</h3>
+              <div class="inspector-actions">
+                <button type="button" class="btn" id="fwd-inspector-copy">Copy JSON</button>
+                <button type="button" class="btn" id="fwd-inspector-close">Close</button>
+              </div>
+            </div>
+            <div class="inspector-body" id="fwd-inspector-body"></div>
+          </aside>
+        </div>
       </section>
 
       <section id="tab-recordings" class="tab">

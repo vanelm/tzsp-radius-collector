@@ -44,6 +44,7 @@ func New(
 
 func (s *Server) RegisterRoutes(mux *http.ServeMux) {
 	mux.HandleFunc("/api/v1/status", s.handleStatus)
+	mux.HandleFunc("/api/v1/forwarder/conversations", s.handleForwarderConversations)
 	mux.HandleFunc("/api/v1/forwarder", s.handleForwarder)
 	mux.HandleFunc("/api/v1/catalog/export", s.handleCatalogExport)
 	mux.HandleFunc("/api/v1/catalog/import", s.handleCatalogImport)
@@ -68,12 +69,17 @@ func (s *Server) handleStatus(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	recActive, recID := s.recorder.Active()
-	fwdTotal, fwdErrs := s.forwarder.Stats()
+	snap := s.forwarder.Snapshot()
 	writeJSON(w, http.StatusOK, map[string]any{
 		"forwarder": map[string]any{
 			"config":          s.forwarder.GetConfig(),
-			"forwarded_total": fwdTotal,
-			"forward_errors":  fwdErrs,
+			"forwarded_total": snap.Forwarded,
+			"forward_errors":  snap.Errors,
+			"responses_total": snap.Responses,
+			"timed_out":       snap.TimedOut,
+			"pending":         snap.Pending,
+			"auth_bind":       snap.AuthBind,
+			"acct_bind":       snap.AcctBind,
 		},
 		"recorder": map[string]any{
 			"active":       recActive,
@@ -96,6 +102,18 @@ func (s *Server) handleForwarder(w http.ResponseWriter, r *http.Request) {
 		}
 		s.forwarder.SetConfig(cfg)
 		writeJSON(w, http.StatusOK, cfg)
+	default:
+		methodNotAllowed(w)
+	}
+}
+
+func (s *Server) handleForwarderConversations(w http.ResponseWriter, r *http.Request) {
+	switch r.Method {
+	case http.MethodGet:
+		writeJSON(w, http.StatusOK, s.forwarder.ListConversations())
+	case http.MethodDelete:
+		s.forwarder.ClearConversations()
+		w.WriteHeader(http.StatusNoContent)
 	default:
 		methodNotAllowed(w)
 	}

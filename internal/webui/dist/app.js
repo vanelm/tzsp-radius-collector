@@ -15,12 +15,20 @@ let ws = null;
 let recordingActive = false;
 let recordingsPollTimer = null;
 let catalogPollTimer = null;
+let forwarderPollTimer = null;
 
 /** @type {{id:string, msg:object, tr:HTMLTableRowElement}[]} */
 let livePackets = [];
 let selectedPacketId = null;
 let nextPacketId = 1;
 const LIVE_MAX = 200;
+
+/** @type {object[]} */
+let fwdConversations = [];
+let selectedConvId = null;
+let fwdInspectSide = 'request';
+let fwdInspectedStatus = '';
+let fwdInspectedResp = '';
 
 function $(id) { return document.getElementById(id); }
 
@@ -54,14 +62,28 @@ function scheduleCatalogPoll() {
   }
 }
 
+function scheduleForwarderPoll() {
+  const shouldPoll = isTabActive('forward');
+  if (shouldPoll && !forwarderPollTimer) {
+    forwarderPollTimer = setInterval(loadConversations, 1000);
+  } else if (!shouldPoll && forwarderPollTimer) {
+    clearInterval(forwarderPollTimer);
+    forwarderPollTimer = null;
+  }
+}
+
 function switchTab(name) {
   document.querySelectorAll('.nav-btn').forEach((b) => b.classList.toggle('active', b.dataset.tab === name));
   document.querySelectorAll('.tab').forEach((t) => t.classList.toggle('active', t.id === `tab-${name}`));
   if (name === 'catalog' || name === 'synthesize') loadCatalog();
   if (name === 'recordings') loadRecordings();
-  if (name === 'forward') loadForwarder();
+  if (name === 'forward') {
+    loadForwarder();
+    loadConversations();
+  }
   scheduleRecordingsPoll();
   scheduleCatalogPoll();
+  scheduleForwarderPoll();
 }
 
 document.querySelectorAll('.nav-btn').forEach((btn) => {
@@ -73,11 +95,16 @@ async function refreshStatus() {
     const s = await api('/api/v1/status');
     recordingActive = s.recorder.active;
     $('status-box').textContent =
-      `Forward: ${s.forwarder.config.enabled ? 'ON' : 'off'} (${s.forwarder.forwarded_total} sent, ${s.forwarder.forward_errors} err)\n` +
+      `Forward: ${s.forwarder.config.enabled ? 'ON' : 'off'} (${s.forwarder.forwarded_total} sent, ${s.forwarder.responses_total ?? 0} resp, ${s.forwarder.forward_errors} err)\n` +
       `Record: ${s.recorder.active ? 'REC ' + s.recorder.recording_id.slice(0, 8) : 'idle'}\n` +
       `Replay: ${s.replay.active ? s.replay.sent + '/' + s.replay.total : 'idle'}\n` +
       `Synth: ${s.synth.active ? s.synth.sent + ' sent' : 'idle'}`;
-    $('fwd-stats').textContent = `Forwarded: ${s.forwarder.forwarded_total}, errors: ${s.forwarder.forward_errors}`;
+    $('fwd-stats').textContent =
+      `Forwarded: ${s.forwarder.forwarded_total}, responses: ${s.forwarder.responses_total ?? 0}, pending: ${s.forwarder.pending ?? 0}, timeouts: ${s.forwarder.timed_out ?? 0}, errors: ${s.forwarder.forward_errors}`;
+    const binds = [];
+    if (s.forwarder.auth_bind) binds.push(`auth ${s.forwarder.auth_bind}`);
+    if (s.forwarder.acct_bind) binds.push(`acct ${s.forwarder.acct_bind}`);
+    $('fwd-bind').textContent = binds.length ? `Listening as ${binds.join(', ')}` : '';
     $('synth-status').textContent = s.synth.active ? `Running, sent ${s.synth.sent}` : 'Idle';
     scheduleRecordingsPoll();
   } catch (e) {
@@ -163,11 +190,9 @@ function dlRows(pairs) {
     .join('');
 }
 
-function renderInspector(msg) {
+function packetSectionsHTML(msg) {
   const radius = msg.radius || {};
   const acct = msg.accounting || {};
-  const attrs = Array.isArray(msg.decoded_attributes) ? msg.decoded_attributes : [];
-
   const snapPairs = [
     ['user', acct.user_name],
     ['MAC', acct.mac || acct.calling_station_id],
@@ -182,8 +207,7 @@ function renderInspector(msg) {
       ? `${acct.input_octets ?? '—'} / ${acct.output_octets ?? '—'}` : ''],
     ['terminate', acct.terminate_cause],
   ];
-
-  $('inspector-body').innerHTML = `
+  return `
     <div class="inspector-section">
       <h4>Capture</h4>
       <dl class="inspector-dl">${dlRows([
@@ -209,16 +233,20 @@ function renderInspector(msg) {
       <dl class="inspector-dl">${dlRows(snapPairs) || '<dt></dt><dd class="muted">—</dd>'}</dl>
     </div>
     <div class="inspector-section">
-      <h4>Attributes (${attrs.length})</h4>
-      <input type="search" class="attr-filter" id="attr-filter" placeholder="Filter by name or value…" />
+      <h4>Attributes (${Array.isArray(msg.decoded_attributes) ? msg.decoded_attributes.length : 0})</h4>
+      <input type="search" class="attr-filter" placeholder="Filter by name or value…" />
       <table class="attr-table">
         <thead><tr><th>Name</th><th>Value</th></tr></thead>
-        <tbody id="attr-rows"></tbody>
+        <tbody class="attr-rows"></tbody>
       </table>
     </div>
   `;
+}
 
-  const tbody = $('attr-rows');
+function bindPacketAttrs(root, msg) {
+  const attrs = Array.isArray(msg.decoded_attributes) ? msg.decoded_attributes : [];
+  const tbody = root.querySelector('.attr-rows');
+  if (!tbody) return;
   const renderAttrs = (q) => {
     const needle = (q || '').trim().toLowerCase();
     tbody.innerHTML = attrs
@@ -237,9 +265,15 @@ function renderInspector(msg) {
       .join('') || `<tr><td colspan="2" class="muted">No attributes</td></tr>`;
   };
   renderAttrs('');
-  $('attr-filter').oninput = (e) => renderAttrs(e.target.value);
+  const filter = root.querySelector('.attr-filter');
+  if (filter) filter.oninput = (e) => renderAttrs(e.target.value);
+}
 
-  $('inspector-body').dataset.json = JSON.stringify(msg, null, 2);
+function renderInspector(msg) {
+  const body = $('inspector-body');
+  body.innerHTML = packetSectionsHTML(msg);
+  bindPacketAttrs(body, msg);
+  body.dataset.json = JSON.stringify(msg, null, 2);
 }
 
 $('live-clear').onclick = () => {
@@ -266,6 +300,10 @@ $('inspector-copy').onclick = async () => {
 };
 
 document.addEventListener('keydown', (e) => {
+  if (isTabActive('forward')) {
+    handleFwdKeys(e);
+    return;
+  }
   if (!isTabActive('live')) return;
   if (e.key === 'Escape' && selectedPacketId) {
     e.preventDefault();
@@ -303,6 +341,166 @@ $('forward-form').onsubmit = async (e) => {
     }),
   });
   refreshStatus();
+};
+
+function convStatusClass(c) {
+  if (c.status === 'complete') {
+    if (c.response_code === 3) return 'reject';
+    if (c.response_code === 11) return 'challenge';
+    if (c.response_code === 2 || c.response_code === 5) return 'accept';
+    return 'complete';
+  }
+  return c.status || 'pending';
+}
+
+function rttLabel(c) {
+  if (c.rtt_ms == null) return '';
+  return `${Number(c.rtt_ms).toFixed(1)} ms`;
+}
+
+async function loadConversations() {
+  try {
+    const items = await api('/api/v1/forwarder/conversations');
+    fwdConversations = Array.isArray(items) ? items : [];
+  } catch {
+    return;
+  }
+  const tbody = $('fwd-conv-rows');
+  tbody.innerHTML = fwdConversations.map((c) => `
+    <tr data-conv-id="${esc(c.id)}" class="${c.id === selectedConvId ? 'selected' : ''}">
+      <td>${esc(c.started_at ? new Date(c.started_at).toLocaleTimeString() : '')}</td>
+      <td>${esc(c.channel || '')}</td>
+      <td>${esc(c.request_name || '')}</td>
+      <td>${esc(c.response_name || '—')}</td>
+      <td>${esc(c.user_name || '')}</td>
+      <td>${esc(c.mac || '')}</td>
+      <td>${esc(c.nas || c.original_nas || '')}</td>
+      <td>${esc(rttLabel(c))}</td>
+      <td><span class="status-pill ${esc(convStatusClass(c))}">${esc(c.status || '')}</span></td>
+    </tr>
+  `).join('') || `<tr><td colspan="9" class="muted">No conversations yet</td></tr>`;
+  tbody.querySelectorAll('[data-conv-id]').forEach((tr) => {
+    tr.onclick = () => selectConversation(tr.dataset.convId);
+  });
+  if (selectedConvId) {
+    const still = fwdConversations.find((c) => c.id === selectedConvId);
+    if (!still) {
+      closeFwdInspector();
+      return;
+    }
+    const respName = still.response_name || '';
+    if (still.status !== fwdInspectedStatus || respName !== fwdInspectedResp) {
+      fwdInspectedStatus = still.status;
+      fwdInspectedResp = respName;
+      renderFwdInspector(still);
+    }
+  }
+}
+
+function selectConversation(id) {
+  const conv = fwdConversations.find((c) => c.id === id);
+  if (!conv) return;
+  selectedConvId = id;
+  if (fwdInspectSide === 'response' && !conv.response) fwdInspectSide = 'request';
+  fwdInspectedStatus = conv.status;
+  fwdInspectedResp = conv.response_name || '';
+  document.querySelectorAll('#fwd-conv-rows tr').forEach((tr) => {
+    tr.classList.toggle('selected', tr.dataset.convId === id);
+  });
+  const panel = $('fwd-inspector');
+  panel.classList.remove('hidden');
+  panel.setAttribute('aria-hidden', 'false');
+  $('fwd-layout').classList.add('inspector-open');
+  renderFwdInspector(conv);
+}
+
+function closeFwdInspector() {
+  selectedConvId = null;
+  fwdInspectedStatus = '';
+  fwdInspectedResp = '';
+  document.querySelectorAll('#fwd-conv-rows tr').forEach((tr) => tr.classList.remove('selected'));
+  const panel = $('fwd-inspector');
+  panel.classList.add('hidden');
+  panel.setAttribute('aria-hidden', 'true');
+  $('fwd-layout')?.classList.remove('inspector-open');
+  $('fwd-inspector-body').innerHTML = '';
+}
+
+function renderFwdInspector(conv) {
+  const body = $('fwd-inspector-body');
+  const pkt = fwdInspectSide === 'response' ? conv.response : conv.request;
+  body.innerHTML = `
+    <div class="inspector-section">
+      <h4>Exchange</h4>
+      <dl class="inspector-dl">${dlRows([
+        ['status', conv.status],
+        ['channel', conv.channel],
+        ['target', conv.target],
+        ['local', conv.local_addr],
+        ['identifier', conv.identifier],
+        ['rewritten', conv.rewritten ? 'yes (NAS-IP → this host)' : 'no'],
+        ['original NAS', conv.original_nas],
+        ['source', conv.source],
+        ['RTT', rttLabel(conv)],
+        ['error', conv.error],
+      ])}</dl>
+    </div>
+    <div class="fwd-pkt-tabs">
+      <button type="button" class="btn ${fwdInspectSide === 'request' ? 'active' : ''}" data-side="request">Request</button>
+      <button type="button" class="btn ${fwdInspectSide === 'response' ? 'active' : ''}" data-side="response" ${conv.response ? '' : 'disabled'}>Response</button>
+    </div>
+    <div class="fwd-pkt-view">${pkt ? packetSectionsHTML(pkt) : '<p class="muted">No packet yet</p>'}</div>
+  `;
+  if (pkt) bindPacketAttrs(body.querySelector('.fwd-pkt-view'), pkt);
+  body.querySelectorAll('[data-side]').forEach((btn) => {
+    btn.onclick = () => {
+      if (btn.disabled) return;
+      fwdInspectSide = btn.dataset.side;
+      renderFwdInspector(conv);
+    };
+  });
+  body.dataset.json = JSON.stringify(conv, null, 2);
+}
+
+function handleFwdKeys(e) {
+  if (e.key === 'Escape' && selectedConvId) {
+    e.preventDefault();
+    closeFwdInspector();
+    return;
+  }
+  if (e.key !== 'ArrowDown' && e.key !== 'ArrowUp') return;
+  if (!fwdConversations.length) return;
+  e.preventDefault();
+  let idx = selectedConvId ? fwdConversations.findIndex((c) => c.id === selectedConvId) : -1;
+  if (e.key === 'ArrowDown') {
+    idx = idx < 0 ? 0 : Math.min(idx + 1, fwdConversations.length - 1);
+  } else {
+    idx = idx < 0 ? 0 : Math.max(idx - 1, 0);
+  }
+  selectConversation(fwdConversations[idx].id);
+  document.querySelector(`#fwd-conv-rows tr[data-conv-id="${fwdConversations[idx].id}"]`)?.scrollIntoView({ block: 'nearest' });
+}
+
+$('fwd-conv-clear').onclick = async () => {
+  await api('/api/v1/forwarder/conversations', { method: 'DELETE' });
+  closeFwdInspector();
+  loadConversations();
+};
+
+$('fwd-inspector-close').onclick = () => closeFwdInspector();
+
+$('fwd-inspector-copy').onclick = async () => {
+  const text = $('fwd-inspector-body').dataset.json || '';
+  try {
+    await navigator.clipboard.writeText(text);
+  } catch {
+    const ta = document.createElement('textarea');
+    ta.value = text;
+    document.body.appendChild(ta);
+    ta.select();
+    document.execCommand('copy');
+    ta.remove();
+  }
 };
 
 async function loadRecordings() {
@@ -450,5 +648,7 @@ $('synth-stop').onclick = async () => { await api('/api/v1/synth/stop', { method
 
 connectWS();
 loadForwarder();
+loadConversations();
 refreshStatus();
 setInterval(refreshStatus, 3000);
+scheduleForwarderPoll();

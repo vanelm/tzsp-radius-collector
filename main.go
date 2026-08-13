@@ -56,16 +56,18 @@ func main() {
 
 	hub := stream.NewHub(slog.With("component", "stream_hub"), cfg.SlowConsumerQueue)
 	processor := pipeline.NewProcessor(dict, slog.With("component", "pipeline"))
-	fwd := forwarder.New(slog.With("component", "forwarder"), st, forwarder.Config{
+	fwd := forwarder.New(slog.With("component", "forwarder"), st, processor, forwarder.Config{
 		AuthTarget: cfg.ForwardAuthTarget,
 		AcctTarget: cfg.ForwardAcctTarget,
 	})
+	defer fwd.Close()
 	rec := recorder.New(slog.With("component", "recorder"), st)
 
 	ctx, cancel := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer cancel()
 
 	orch := runtime.NewOrchestrator(slog.With("component", "orchestrator"), hub, processor, fwd, rec, catalog.NewAutofill(slog.With("component", "catalog"), st))
+	fwd.SetEmit(orch.Emit)
 	rep := replay.New(slog.With("component", "replay"), st, fwd, orch.Emit)
 	syn := synth.New(slog.With("component", "synth"), st, fwd, orch.Emit)
 

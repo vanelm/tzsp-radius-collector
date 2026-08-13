@@ -52,6 +52,22 @@ func (s *Store) GetNAS(id string) (NAS, error) {
 	return n, err
 }
 
+func (s *Store) GetNASByIP(ip string) (NAS, error) {
+	ip = strings.TrimSpace(ip)
+	if ip == "" {
+		return NAS{}, fmt.Errorf("nas not found")
+	}
+	var n NAS
+	err := s.db.QueryRow(`
+		SELECT id, name, ip, secret, vendor, identifier, auth_port, acct_port, notes, created_at
+		FROM nas WHERE ip = ? LIMIT 1
+	`, ip).Scan(&n.ID, &n.Name, &n.IP, &n.Secret, &n.Vendor, &n.Identifier, &n.AuthPort, &n.AcctPort, &n.Notes, &n.CreatedAt)
+	if err == sql.ErrNoRows {
+		return NAS{}, fmt.Errorf("nas not found")
+	}
+	return n, err
+}
+
 func (s *Store) CreateNAS(n NAS) (NAS, error) {
 	if n.ID == "" {
 		n.ID = newID()

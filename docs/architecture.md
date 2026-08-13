@@ -29,7 +29,7 @@ replay / synth ───────────────┘                 
 | `radiusdecode` | словарь, пакет, accounting/identity snapshot |
 | `runtime` | оркестрация: record/forward/decode/publish |
 | `stream` | Hub, фильтры, hello, `/ws`, `/healthz` |
-| `forwarder` | verbatim UDP forward запросов |
+| `forwarder` | UDP proxy запросов: ответы, conversations |
 | `recorder` | запись request-пакетов в SQLite |
 | `replay` | воспроизведение записей |
 | `synth` | синтез auth/acct сессий из каталога |
@@ -65,7 +65,8 @@ replay / synth ───────────────┘                 
 
 ## Orchestrator
 
-Для **request**-пакетов (`IsRequest`): сначала `recorder.MaybeRecord`, затем `forwarder.MaybeForward`.  
+Для **request**-пакетов (`IsRequest`): сначала `recorder.MaybeRecord`, затем `forwarder.MaybeForward` (сокет + rewrite NAS-IP + ожидание ответа).  
+Ответы форвардера снова входят в `Emit` с `source: forward-response` и попадают в ленту.  
 Далее transform → catalog observe → `hub.Publish`. Ошибки парсинга — событие в ленту не попадает (только debug-лог).
 
 ## Зависимости без CGO

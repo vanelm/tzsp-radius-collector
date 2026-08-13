@@ -53,6 +53,63 @@ func ParsePacket(raw []byte) (*Packet, error) {
 	return packet, nil
 }
 
+func EncodePacket(p *Packet) []byte {
+	if p == nil {
+		return nil
+	}
+	attrsLen := 0
+	encoded := make([][]byte, 0, len(p.Attributes))
+	for _, a := range p.Attributes {
+		avp := encodeAVP(a.Type, a.Value)
+		encoded = append(encoded, avp)
+		attrsLen += len(avp)
+	}
+	total := 20 + attrsLen
+	out := make([]byte, total)
+	out[0] = p.Code
+	out[1] = p.Identifier
+	binary.BigEndian.PutUint16(out[2:4], uint16(total))
+	copy(out[4:20], p.Authenticator[:])
+	offset := 20
+	for _, a := range encoded {
+		copy(out[offset:], a)
+		offset += len(a)
+	}
+	p.Length = uint16(total)
+	return out
+}
+
+func AttributeValue(p *Packet, typ uint8) ([]byte, bool) {
+	if p == nil {
+		return nil, false
+	}
+	for _, a := range p.Attributes {
+		if a.Type == typ {
+			return a.Value, true
+		}
+	}
+	return nil, false
+}
+
+func HasAttribute(p *Packet, typ uint8) bool {
+	_, ok := AttributeValue(p, typ)
+	return ok
+}
+
+func SetAttribute(p *Packet, typ uint8, value []byte) {
+	if p == nil {
+		return
+	}
+	cp := append([]byte(nil), value...)
+	for i := range p.Attributes {
+		if p.Attributes[i].Type == typ {
+			p.Attributes[i].Value = cp
+			return
+		}
+	}
+	p.Attributes = append(p.Attributes, AVP{Type: typ, Value: cp})
+}
+
 func CodeName(code uint8) string {
 	switch code {
 	case 1:

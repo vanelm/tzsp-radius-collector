@@ -32,5 +32,5 @@ docker compose up -d --build
 - `URSA_TZSP_SNIFF_PROMISCUOUS=true` только пишет warning: promiscuous mode **не поддерживается** текущим afpacket-бэкендом.
 - Docker-сборка с `CGO_ENABLED=0`: raw sniff недоступен (`gopacket/afpacket` требует CGO; libpcap не нужен).
 - Форвардер по умолчанию **выключен** (`enabled: false`). Replay/synth вызывают `ForwardBytes`, но UDP уходит только если форвардер включён.
-- Authenticator при forward/replay/synth **не пересчитывается** — пакеты уходят verbatim (как записаны / собраны).
+- Forwarder шлёт запросы со своего UDP-сокета (NAS-IP rewrite) и ждёт ответы; Accounting/Message-Authenticator переподписываются, если в каталоге NAS есть secret.
 - JSON Schema ленты включает `src_addr` / `dst_addr` (есть и в реальном JSON).

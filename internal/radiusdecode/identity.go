@@ -35,7 +35,10 @@ func BuildIdentitySnapshot(packet *Packet, dict *AttributeDictionary, nasFallbac
 		mac = NormalizeMAC(first(attrs, "Attr-31"))
 	}
 
-	nas := first(attrs, "NAS-IP-Address")
+	nas := NASIPString(packet)
+	if nas == "" {
+		nas = first(attrs, "NAS-IP-Address")
+	}
 	if nas == "" {
 		nas = first(attrs, "Attr-4")
 	}

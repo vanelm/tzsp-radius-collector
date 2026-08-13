@@ -13,7 +13,12 @@ UI и внешние клиенты используют те же эндпои�
   "forwarder": {
     "config": { "enabled": false, "auth_target": "...", "acct_target": "..." },
     "forwarded_total": 0,
-    "forward_errors": 0
+    "forward_errors": 0,
+    "responses_total": 0,
+    "timed_out": 0,
+    "pending": 0,
+    "auth_bind": "",
+    "acct_bind": ""
   },
   "recorder": { "active": false, "recording_id": "" },
   "replay": { "active": false, "sent": 0, "total": 0, "progress": 0 },
@@ -27,8 +32,12 @@ UI и внешние клиенты используют те же эндпои�
 |--------|------|----------|
 | GET | `/forwarder` | текущий конфиг |
 | PUT | `/forwarder` | тело: `{ "enabled", "auth_target", "acct_target" }` |
+| GET | `/forwarder/conversations` | последние request/response пары (до 200) |
+| DELETE | `/forwarder/conversations` | очистить список |
 
 Конфиг персистится в SQLite (`settings.forwarder_config`).
+
+Conversation: `id`, `started_at`, `channel` (`auth`/`acct`), `status` (`pending`/`complete`/`timeout`/`error`), `request` / `response` (тот же JSON, что в Live-ленте), `rtt_ms`, `rewritten`.
 
 ## Catalog — NAS
 
