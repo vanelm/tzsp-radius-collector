@@ -20,7 +20,8 @@ Upgrade: gorilla/websocket, `CheckOrigin` всегда true.
     "filter.user_names",
     "filter.nas_ips",
     "filter.vendors",
-    "filter.status_types"
+    "filter.status_types",
+    "filter.sources"
   ]
 }
 ```
@@ -38,7 +39,8 @@ Upgrade: gorilla/websocket, `CheckOrigin` всегда true.
     "user_names": [],
     "nas_ips": [],
     "vendors": [],
-    "status_types": []
+    "status_types": [],
+    "sources": []
   }
 }
 ```
@@ -56,7 +58,7 @@ Upgrade: gorilla/websocket, `CheckOrigin` всегда true.
 | Поле | Описание |
 |------|----------|
 | `timestamp` | UTC RFC3339 |
-| `source` | `tzsp_udp` \| `raw_sniff` \| `synthetic` \| `replay` |
+| `source` | `tzsp_udp` \| `raw_sniff` \| `synthetic` \| `replay` \| `forward` \| `forward-response` |
 | `remote_addr` | отправитель TZSP (UDP) |
 | `capture_interface` | iface raw sniff |
 | `src_addr` / `dst_addr` | L3 из захвата (если удалось извлечь) |
@@ -99,4 +101,6 @@ Upgrade: gorilla/websocket, `CheckOrigin` всегда true.
 }
 ```
 
-UI Live Feed подписывается с пустым фильтром и показывает таблицу + инспектор пакета по клику.
+UI Live Feed подключается к `/ws` только пока открыта вкладка Live и не включён Pause. Пустой фильтр — все события. Сравнение глазами: таблица Forward (poll summaries) + инспектор (полный пакет по клику). Отдельный analytics-канал не нужен.
+
+При нагрузке не держите Live открытым: каждый WS-клиент заставляет коллектор сериализовать decoded-ленту. Ursa на том же `/ws` — та же стоимость. `filter.sources` отсекает доставку; `json.Marshal` делается один раз, только если хотя бы один клиент прошёл фильтр. Если подписчиков нет — marshal не делается. Отдельный analytics WebSocket не нужен.

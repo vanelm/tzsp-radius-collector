@@ -64,7 +64,11 @@ func TestForwarderCapturesAccessConversation(t *testing.T) {
 	if conv.UserName != "alice" {
 		t.Fatalf("user %q", conv.UserName)
 	}
-	if conv.Response == nil || conv.Request == nil {
+	if conv.Request != nil || conv.Response != nil {
+		t.Fatal("list endpoint should omit packet payloads")
+	}
+	full, ok := fwd.GetConversation(conv.ID)
+	if !ok || full.Response == nil || full.Request == nil {
 		t.Fatal("expected request and response payloads")
 	}
 	if !conv.Rewritten {

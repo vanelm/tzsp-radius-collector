@@ -10,9 +10,20 @@ Harness живёт в том же процессе, что и коллектор
 - Defaults targets из env; runtime-конфиг в `settings`.
 - Держит постоянные UDP-сокеты и **ждёт ответы**. Request+response склеиваются в conversation (по identifier, таймаут 5s).
 - Исходящий запрос уходит с IP/порта харнесса; **NAS-IP-Address** подменяется на локальный адрес сокета, чтобы сервер отвечал сюда (Access-Request без Message-Authenticator — всегда; Accounting / Message-Authenticator — если в каталоге NAS есть secret, пакет переподписывается).
-- Ответы появляются в UI Forward и в Live-ленте (`source: forward-response`).
+- Ответы появляются в UI Forward (`source` запроса сохраняется; ответ в ленте — `forward-response`). Live получает ответ только если вкладка Live открыта.
 
-Replay и synth вызывают `ForwardBytes` → тот же путь `MaybeForward`. Если форвардер выключен, UDP **не** уходит; при `mirror_to_stream` пакеты всё равно появляются в WebSocket.
+Replay и synth вызывают `ForwardBytes` → тот же путь `MaybeForward`. Если форвардер выключен, UDP **не** уходит; при `mirror_to_stream` пакеты всё равно идут в orchestrator (WS — только при живом подписчике).
+
+UI Forward держит **200** conversations в RAM коллектора и в браузере (poll — summaries без атрибутов; полный пакет по клику). Это не буфер нагрузки.
+
+## Load-test
+
+Буфер 1k–10k запросов — **Recordings** (сырые `packet_blob` в SQLite), не Live/Forward ring.
+
+- Запись live → Stop → Replay с `rate_rps` / `preserve_timing` / `loop`.
+- На прогоне закройте Live (Pause тоже рвёт WS) и не оставляйте Forward открытым без нужды: poll 1 Hz тогда только summaries.
+- RADIUS Identifier — 256 in-flight на auth и на acct; при высоком RPS и RTT 3–5s слоты начнут перетираться.
+- Сравнение глазами: таблица Forward + инспектор. Отдельный analytics WebSocket не нужен; Ursa — тот же `/ws` с `filter.sources`.
 
 ## Record
 

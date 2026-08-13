@@ -56,11 +56,12 @@ avahi-browse -art | grep tzsp_collector
 
 1. **`URSA_TZSP_SNIFF_FILTER` не применяется** — BPF не ставится; весь UDP с iface читается, отбор эвристикой RADIUS.
 2. **Promiscuous mode не работает** на текущем afpacket-бэкенде.
-3. **Forwarder off by default** — replay/synth без включения forward не шлют UDP наружу.
-4. **Forwarder off by default** — replay/synth без включения forward не шлют UDP наружу. Включённый forwarder держит UDP-сокеты, переписывает NAS-IP и ждёт ответы (таймаут 5s).
-5. Schema vs runtime: в событиях есть `src_addr`/`dst_addr` (отражено в `docs/collector-feed.schema.json`).
+3. **Forwarder off by default** — replay/synth без включения forward не шлют UDP наружу. Включённый forwarder держит UDP-сокеты, переписывает NAS-IP и ждёт ответы (таймаут 5s).
+4. **Load-test**: UI ring = 200 (браузер + RAM форвардера). Буфер 1k–10k — Recordings. Live WS не подключён вне вкладки Live / при Pause — коллектор не marshal'ит ленту без подписчиков.
+5. Schema vs runtime: в событиях есть `src_addr`/`dst_addr`; `source` включает `forward` / `forward-response`.
 6. Медленные WS-клиенты отключаются при переполнении клиентской очереди.
 7. **Docker/CGO=0**: AF_PACKET raw sniff недоступен; используйте TZSP UDP.
+8. RADIUS Identifier ограничивает ~256 одновременных outstanding на канал (auth/acct).
 
 ## Локальная сборка без Docker
 

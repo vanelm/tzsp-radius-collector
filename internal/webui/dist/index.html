@@ -26,6 +26,7 @@
           <label><input type="checkbox" id="live-pause" /> Pause</label>
           <button type="button" class="btn" id="live-clear">Clear</button>
         </header>
+        <p class="muted">WebSocket is connected only while this tab is active and not paused (last 200 packets in the browser).</p>
         <div class="live-layout">
           <div class="live-table-wrap">
             <table>
@@ -56,7 +57,7 @@
         </form>
         <p id="fwd-stats" class="muted"></p>
         <p id="fwd-bind" class="muted"></p>
-        <p class="muted">Requests are sent from this host (NAS-IP rewritten when possible) so the RADIUS server replies here. Conversations pair each request with its response.</p>
+        <p class="muted">Requests are sent from this host (NAS-IP rewritten when possible) so the RADIUS server replies here. Conversations pair each request with its response. The on-screen ring is 200 exchanges; record 1k–10k packets under Recordings and replay at a chosen rate. Last 256 in-flight identifiers per auth/acct channel.</p>
 
         <div class="fwd-conv-header">
           <h3>Conversations</h3>

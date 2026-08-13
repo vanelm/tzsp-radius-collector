@@ -12,6 +12,8 @@ const api = (path, opts = {}) => fetch(path, {
 
 let selectedRecordingId = null;
 let ws = null;
+let wsWanted = false;
+let wsReconnectTimer = null;
 let recordingActive = false;
 let recordingsPollTimer = null;
 let catalogPollTimer = null;
@@ -26,6 +28,7 @@ const LIVE_MAX = 200;
 /** @type {object[]} */
 let fwdConversations = [];
 let selectedConvId = null;
+let selectedConvFull = null;
 let fwdInspectSide = 'request';
 let fwdInspectedStatus = '';
 let fwdInspectedResp = '';
@@ -84,6 +87,7 @@ function switchTab(name) {
   scheduleRecordingsPoll();
   scheduleCatalogPoll();
   scheduleForwarderPoll();
+  scheduleLiveWS();
 }
 
 document.querySelectorAll('.nav-btn').forEach((btn) => {
@@ -112,17 +116,50 @@ async function refreshStatus() {
   }
 }
 
+function liveFeedWanted() {
+  return isTabActive('live') && !$('live-pause')?.checked;
+}
+
+function disconnectWS() {
+  if (wsReconnectTimer) {
+    clearTimeout(wsReconnectTimer);
+    wsReconnectTimer = null;
+  }
+  if (ws) {
+    ws.onclose = null;
+    ws.close();
+    ws = null;
+  }
+}
+
+function scheduleLiveWS() {
+  if (liveFeedWanted()) {
+    wsWanted = true;
+    if (!ws || ws.readyState === WebSocket.CLOSING || ws.readyState === WebSocket.CLOSED) {
+      connectWS();
+    }
+    return;
+  }
+  wsWanted = false;
+  disconnectWS();
+}
+
 function connectWS() {
+  if (!wsWanted) return;
+  disconnectWS();
   const proto = location.protocol === 'https:' ? 'wss' : 'ws';
   ws = new WebSocket(`${proto}://${location.host}/ws`);
   ws.onopen = () => ws.send(JSON.stringify({ action: 'subscribe', filter: {} }));
   ws.onmessage = (ev) => {
-    if ($('live-pause').checked) return;
+    if (!liveFeedWanted()) return;
     const msg = JSON.parse(ev.data);
     if (msg.type === 'hello') return;
     addLiveRow(msg);
   };
-  ws.onclose = () => setTimeout(connectWS, 2000);
+  ws.onclose = () => {
+    ws = null;
+    if (wsWanted) wsReconnectTimer = setTimeout(connectWS, 2000);
+  };
 }
 
 function addLiveRow(msg) {
@@ -394,7 +431,7 @@ async function loadConversations() {
     if (still.status !== fwdInspectedStatus || respName !== fwdInspectedResp) {
       fwdInspectedStatus = still.status;
       fwdInspectedResp = respName;
-      renderFwdInspector(still);
+      openConversation(still.id);
     }
   }
 }
@@ -403,7 +440,7 @@ function selectConversation(id) {
   const conv = fwdConversations.find((c) => c.id === id);
   if (!conv) return;
   selectedConvId = id;
-  if (fwdInspectSide === 'response' && !conv.response) fwdInspectSide = 'request';
+  if (fwdInspectSide === 'response' && !conv.response_name) fwdInspectSide = 'request';
   fwdInspectedStatus = conv.status;
   fwdInspectedResp = conv.response_name || '';
   document.querySelectorAll('#fwd-conv-rows tr').forEach((tr) => {
@@ -413,11 +450,24 @@ function selectConversation(id) {
   panel.classList.remove('hidden');
   panel.setAttribute('aria-hidden', 'false');
   $('fwd-layout').classList.add('inspector-open');
-  renderFwdInspector(conv);
+  openConversation(id);
+}
+
+async function openConversation(id) {
+  try {
+    selectedConvFull = await api(`/api/v1/forwarder/conversations/${id}`);
+  } catch {
+    selectedConvFull = fwdConversations.find((c) => c.id === id) || null;
+  }
+  if (selectedConvFull && selectedConvId === id) {
+    if (fwdInspectSide === 'response' && !selectedConvFull.response) fwdInspectSide = 'request';
+    renderFwdInspector(selectedConvFull);
+  }
 }
 
 function closeFwdInspector() {
   selectedConvId = null;
+  selectedConvFull = null;
   fwdInspectedStatus = '';
   fwdInspectedResp = '';
   document.querySelectorAll('#fwd-conv-rows tr').forEach((tr) => tr.classList.remove('selected'));
@@ -648,9 +698,10 @@ $('synth-form').onsubmit = async (e) => {
 
 $('synth-stop').onclick = async () => { await api('/api/v1/synth/stop', { method: 'POST', body: '{}' }); refreshStatus(); };
 
-connectWS();
 loadForwarder();
 loadConversations();
 refreshStatus();
 setInterval(refreshStatus, 3000);
 scheduleForwarderPoll();
+$('live-pause').addEventListener('change', scheduleLiveWS);
+scheduleLiveWS();

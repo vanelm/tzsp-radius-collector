@@ -32,12 +32,13 @@ UI и внешние клиенты используют те же эндпои�
 |--------|------|----------|
 | GET | `/forwarder` | текущий конфиг |
 | PUT | `/forwarder` | тело: `{ "enabled", "auth_target", "acct_target" }` |
-| GET | `/forwarder/conversations` | последние request/response пары (до 200) |
+| GET | `/forwarder/conversations` | последние пары без тел пакетов (до 200) |
+| GET | `/forwarder/conversations/{id}` | полные request/response |
 | DELETE | `/forwarder/conversations` | очистить список |
 
 Конфиг персистится в SQLite (`settings.forwarder_config`).
 
-Conversation: `id`, `started_at`, `channel` (`auth`/`acct`), `status` (`pending`/`complete`/`timeout`/`error`), `request` / `response` (тот же JSON, что в Live-ленте), `rtt_ms`, `rewritten`.
+Список — summary (`id`, `status`, codes, identity, `rtt_ms`, `rewritten`) без `decoded_attributes`. Полные пакеты — только `{id}` (инспектор UI).
 
 ## Catalog — NAS
 

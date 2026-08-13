@@ -16,6 +16,7 @@ type Filter struct {
 	Vendors     []string `json:"vendors,omitempty"`
 	MACs        []string `json:"macs,omitempty"`
 	StatusTypes []string `json:"status_types,omitempty"`
+	Sources     []string `json:"sources,omitempty"`
 }
 
 type Client struct {
@@ -81,13 +82,26 @@ func (h *Hub) UpdateFilter(id string, filter Filter) {
 }
 
 func (h *Hub) Publish(msg pipeline.StreamMessage) {
+	h.mu.RLock()
+	defer h.mu.RUnlock()
+	if len(h.clients) == 0 {
+		return
+	}
+	matched := false
+	for _, client := range h.clients {
+		if matchesFilter(msg, client.filter) {
+			matched = true
+			break
+		}
+	}
+	if !matched {
+		return
+	}
+
 	payload, err := json.Marshal(msg)
 	if err != nil {
 		return
 	}
-
-	h.mu.RLock()
-	defer h.mu.RUnlock()
 	for _, client := range h.clients {
 		if !matchesFilter(msg, client.filter) {
 			continue
@@ -119,6 +133,9 @@ func matchesFilter(msg pipeline.StreamMessage, filter Filter) bool {
 		return false
 	}
 	if len(filter.Vendors) > 0 && !containsFold(filter.Vendors, mapString(accounting, "nas_vendor")) {
+		return false
+	}
+	if len(filter.Sources) > 0 && !containsFold(filter.Sources, msg.Source) {
 		return false
 	}
 	return true

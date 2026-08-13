@@ -28,6 +28,7 @@ var radiusCapabilities = []string{
 	"filter.nas_ips",
 	"filter.vendors",
 	"filter.status_types",
+	"filter.sources",
 }
 
 func BuildHello(cfg config.Config) Hello {

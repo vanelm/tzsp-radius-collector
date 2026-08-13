@@ -9,10 +9,10 @@ import (
 
 func TestBuildHello(t *testing.T) {
 	cfg := config.Config{
-		CollectorID:  "lab-collector",
-		FeedType:     config.DefaultFeedType,
-		FeedVersion:  config.DefaultFeedVersion,
-		SchemaID:     config.DefaultSchemaID,
+		CollectorID: "lab-collector",
+		FeedType:    config.DefaultFeedType,
+		FeedVersion: config.DefaultFeedVersion,
+		SchemaID:    config.DefaultSchemaID,
 	}
 
 	hello := BuildHello(cfg)
@@ -27,6 +27,16 @@ func TestBuildHello(t *testing.T) {
 	}
 	if len(hello.Capabilities) == 0 {
 		t.Fatal("expected capabilities")
+	}
+	foundSources := false
+	for _, cap := range hello.Capabilities {
+		if cap == "filter.sources" {
+			foundSources = true
+			break
+		}
+	}
+	if !foundSources {
+		t.Fatal("expected filter.sources capability")
 	}
 
 	raw, err := MarshalHello(cfg)

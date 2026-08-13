@@ -74,9 +74,24 @@ func (f *Forwarder) ListConversations() []Conversation {
 	defer f.convMu.Unlock()
 	out := make([]Conversation, len(f.convs))
 	for i, c := range f.convs {
-		out[i] = *c
+		sum := *c
+		sum.Request = nil
+		sum.Response = nil
+		out[i] = sum
 	}
 	return out
+}
+
+func (f *Forwarder) GetConversation(id string) (Conversation, bool) {
+	f.expirePending()
+	f.convMu.Lock()
+	defer f.convMu.Unlock()
+	for _, c := range f.convs {
+		if c.ID == id {
+			return *c, true
+		}
+	}
+	return Conversation{}, false
 }
 
 func (f *Forwarder) ClearConversations() {

@@ -44,6 +44,7 @@ func New(
 
 func (s *Server) RegisterRoutes(mux *http.ServeMux) {
 	mux.HandleFunc("/api/v1/status", s.handleStatus)
+	mux.HandleFunc("/api/v1/forwarder/conversations/", s.handleForwarderConversationItem)
 	mux.HandleFunc("/api/v1/forwarder/conversations", s.handleForwarderConversations)
 	mux.HandleFunc("/api/v1/forwarder", s.handleForwarder)
 	mux.HandleFunc("/api/v1/catalog/export", s.handleCatalogExport)
@@ -117,6 +118,24 @@ func (s *Server) handleForwarderConversations(w http.ResponseWriter, r *http.Req
 	default:
 		methodNotAllowed(w)
 	}
+}
+
+func (s *Server) handleForwarderConversationItem(w http.ResponseWriter, r *http.Request) {
+	id := strings.TrimPrefix(r.URL.Path, "/api/v1/forwarder/conversations/")
+	if id == "" || strings.Contains(id, "/") {
+		notFound(w)
+		return
+	}
+	if r.Method != http.MethodGet {
+		methodNotAllowed(w)
+		return
+	}
+	conv, ok := s.forwarder.GetConversation(id)
+	if !ok {
+		notFound(w)
+		return
+	}
+	writeJSON(w, http.StatusOK, conv)
 }
 
 func (s *Server) handleNASCollection(w http.ResponseWriter, r *http.Request) {

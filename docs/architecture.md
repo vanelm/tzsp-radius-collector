@@ -66,8 +66,8 @@ replay / synth ───────────────┘                 
 ## Orchestrator
 
 Для **request**-пакетов (`IsRequest`): сначала `recorder.MaybeRecord`, затем `forwarder.MaybeForward` (сокет + rewrite NAS-IP + ожидание ответа).  
-Ответы форвардера снова входят в `Emit` с `source: forward-response` и попадают в ленту.  
-Далее transform → catalog observe → `hub.Publish`. Ошибки парсинга — событие в ленту не попадает (только debug-лог).
+Ответы форвардера снова входят в `Emit` с `source: forward-response`.  
+Далее transform → catalog observe → `hub.Publish` (`json.Marshal` только если есть подписчик, чей фильтр пропускает событие). Ошибки парсинга — событие в ленту не попадает (только debug-лог).
 
 ## Зависимости без CGO
 

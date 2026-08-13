@@ -33,4 +33,5 @@ docker compose up -d --build
 - Docker-сборка с `CGO_ENABLED=0`: raw sniff недоступен (`gopacket/afpacket` требует CGO; libpcap не нужен).
 - Форвардер по умолчанию **выключен** (`enabled: false`). Replay/synth вызывают `ForwardBytes`, но UDP уходит только если форвардер включён.
 - Forwarder шлёт запросы со своего UDP-сокета (NAS-IP rewrite) и ждёт ответы; Accounting/Message-Authenticator переподписываются, если в каталоге NAS есть secret.
-- JSON Schema ленты включает `src_addr` / `dst_addr` (есть и в реальном JSON).
+- UI Live подключается к `/ws` только на вкладке Live; список conversations — summaries. Буфер нагрузки 1k–10k — Recordings, не UI.
+- JSON Schema ленты включает `src_addr` / `dst_addr` и `source` `forward` / `forward-response`.

@@ -65,7 +65,8 @@ Base path: `/api/v1/`
 |--------|------|-------------|
 | GET | `/status` | Forwarder, recorder, replay, synth state |
 | GET/PUT | `/forwarder` | Forwarder config |
-| GET/DELETE | `/forwarder/conversations` | Forwarded request/response pairs |
+| GET/DELETE | `/forwarder/conversations` | Conversation summaries (ring of 200) |
+| GET | `/forwarder/conversations/{id}` | Full request/response for inspector |
 | CRUD | `/nas`, `/clients` | Catalog |
 | GET | `/catalog/export` | Export NAS + clients as JSON |
 | POST | `/catalog/import` | Import catalog (`mode`: `merge` or `replace`) |
@@ -106,6 +107,7 @@ Filter fields:
 - `vendors`
 - `macs`
 - `status_types`
+- `sources`
 
 Feed JSON Schema:
 

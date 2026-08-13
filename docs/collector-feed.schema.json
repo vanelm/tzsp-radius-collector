@@ -24,7 +24,9 @@
         "tzsp_udp",
         "raw_sniff",
         "synthetic",
-        "replay"
+        "replay",
+        "forward",
+        "forward-response"
       ]
     },
     "remote_addr": {
