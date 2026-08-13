@@ -43,6 +43,12 @@ func BuildAccountingSnapshot(packet *Packet, dict *AttributeDictionary, now time
 	if vendor, _ := identity["nas_vendor"].(string); vendor != "" {
 		snapshot["nas_vendor"] = vendor
 	}
+	if v, ok := identity["has_proxy_state"]; ok {
+		snapshot["has_proxy_state"] = v
+	}
+	if rfd, _ := identity["rf_domain"].(string); rfd != "" {
+		snapshot["rf_domain"] = rfd
+	}
 	if framedIP := first(attrs, "Framed-IP-Address"); framedIP != "" {
 		snapshot["framed_ip"] = framedIP
 	}

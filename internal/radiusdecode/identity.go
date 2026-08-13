@@ -64,6 +64,17 @@ func BuildIdentitySnapshot(packet *Packet, dict *AttributeDictionary, nasFallbac
 		"nas_identifier":     nasIdentifier,
 	}
 
+	if HasProxyState(packet) || first(attrs, "Proxy-State") != "" || first(attrs, "Attr-33") != "" {
+		snapshot["has_proxy_state"] = true
+	}
+	rfDomain := first(attrs, "Symbol-Device-RF-Domain")
+	if rfDomain == "" {
+		rfDomain = RFDomainString(packet)
+	}
+	if rfDomain != "" {
+		snapshot["rf_domain"] = rfDomain
+	}
+
 	decoded := DecodePacketAttributes(packet, dict)
 	if vendor := detectNASVendor(decoded); vendor != "" {
 		snapshot["nas_vendor"] = vendor

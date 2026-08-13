@@ -29,12 +29,26 @@ func (a *Autofill) Observe(msg pipeline.StreamMessage) {
 	nasVendor := mapString(msg.Accounting, "nas_vendor")
 	mac := mapString(msg.Accounting, "mac")
 	userName := mapString(msg.Accounting, "user_name")
+	hasProxy := mapBool(msg.Accounting, "has_proxy_state")
+	rfDomain := mapString(msg.Accounting, "rf_domain")
 
 	// NAS entries are learned from client requests only; responses mirrored from
 	// the RADIUS server carry the server IP as UDP source and must not be cataloged.
-	if nasIP != "" && radiusdecode.IsRequestCode(msg.Radius.Code) {
-		if err := a.store.EnsureNAS(nasIP, nasIdentifier, nasVendor); err != nil {
-			a.logger.Debug("catalog nas autofill failed", "error", err, "ip", nasIP)
+	if radiusdecode.IsRequestCode(msg.Radius.Code) {
+		if hasProxy {
+			if src := radiusdecode.HostPart(msg.SrcAddr); src != "" {
+				nasIP = src
+			}
+		}
+		if nasIP != "" {
+			incoming := CatalogNASName(hasProxy, rfDomain, nasIdentifier)
+			name := incoming
+			if existing, err := a.store.GetNASByIP(nasIP); err == nil {
+				name = MergeAutofillName(existing.Name, incoming, nasIP)
+			}
+			if err := a.store.EnsureNAS(nasIP, name, nasIdentifier, nasVendor); err != nil {
+				a.logger.Debug("catalog nas autofill failed", "error", err, "ip", nasIP)
+			}
 		}
 	}
 	if mac != "" {
@@ -57,4 +71,16 @@ func mapString(m map[string]any, key string) string {
 		return ""
 	}
 	return strings.TrimSpace(s)
+}
+
+func mapBool(m map[string]any, key string) bool {
+	if m == nil {
+		return false
+	}
+	v, ok := m[key]
+	if !ok || v == nil {
+		return false
+	}
+	b, ok := v.(bool)
+	return ok && b
 }

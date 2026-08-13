@@ -198,6 +198,8 @@ function packetSectionsHTML(msg) {
     ['MAC', acct.mac || acct.calling_station_id],
     ['NAS', acct.nas],
     ['NAS id', acct.nas_identifier],
+    ['RF domain', acct.rf_domain],
+    ['proxy', acct.has_proxy_state ? 'yes' : ''],
     ['vendor', acct.nas_vendor],
     ['status', acct.status_type],
     ['session', acct.acct_session_id],

@@ -115,12 +115,12 @@ func (s *Store) DeleteNAS(id string) error {
 	return nil
 }
 
-func (s *Store) EnsureNAS(ip, identifier, vendor string) error {
+func (s *Store) EnsureNAS(ip, name, identifier, vendor string) error {
 	ip = strings.TrimSpace(ip)
 	if ip == "" {
 		return nil
 	}
-	name := strings.TrimSpace(identifier)
+	name = strings.TrimSpace(name)
 	if name == "" {
 		name = ip
 	}
@@ -132,7 +132,7 @@ func (s *Store) EnsureNAS(ip, identifier, vendor string) error {
 	if err == nil {
 		_, err = s.db.Exec(`
 			UPDATE nas SET
-				name = CASE WHEN name = ip AND ? != '' THEN ? ELSE name END,
+				name = CASE WHEN ? != '' THEN ? ELSE name END,
 				identifier = CASE WHEN identifier = '' AND ? != '' THEN ? ELSE identifier END,
 				vendor = CASE WHEN vendor = '' AND ? != '' THEN ? ELSE vendor END
 			WHERE id = ?

@@ -34,7 +34,13 @@ Replay и synth вызывают `ForwardBytes` → тот же путь `MaybeF
 
 ## Catalog
 
-Таблицы `nas`, `clients`. Autofill (`catalog.Autofill`) подсматривает decoded ленту и может дополнять каталог. Export/import JSON через API.
+Таблицы `nas`, `clients`. Autofill (`catalog.Autofill`) подсматривает decoded ленту и может дополнять каталог.
+
+Имя NAS:
+
+- нет `Proxy-State` — `NAS-Identifier`;
+- есть `Proxy-State` — `PROXY-<Symbol-Device-RF-Domain>` (запись ведётся по UDP source, т.е. RADIUS client / proxy);
+- у того же client IP несколько RF-Domain — имя становится `PROXY-VX`.
 
 ## Synthesize
 
