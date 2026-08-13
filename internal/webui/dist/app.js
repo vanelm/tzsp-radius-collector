@@ -16,7 +16,19 @@ let recordingActive = false;
 let recordingsPollTimer = null;
 let catalogPollTimer = null;
 
+/** @type {{id:string, msg:object, tr:HTMLTableRowElement}[]} */
+let livePackets = [];
+let selectedPacketId = null;
+let nextPacketId = 1;
+const LIVE_MAX = 200;
+
 function $(id) { return document.getElementById(id); }
+
+function esc(s) {
+  return String(s ?? '').replace(/[&<>"']/g, (c) => ({
+    '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;',
+  }[c]));
+}
 
 function isTabActive(name) {
   return $(`tab-${name}`)?.classList.contains('active');
@@ -88,14 +100,190 @@ function connectWS() {
 
 function addLiveRow(msg) {
   const tbody = $('live-rows');
+  const id = String(nextPacketId++);
   const tr = document.createElement('tr');
+  tr.dataset.packetId = id;
   const acct = msg.accounting || {};
-  tr.innerHTML = `<td>${new Date(msg.timestamp).toLocaleTimeString()}</td><td>${msg.source}</td><td>${msg.radius.code_name}</td><td>${acct.user_name || ''}</td><td>${acct.mac || ''}</td><td>${acct.nas || ''}</td>`;
+  tr.innerHTML =
+    `<td>${esc(new Date(msg.timestamp).toLocaleTimeString())}</td>` +
+    `<td>${esc(msg.source)}</td>` +
+    `<td>${esc(msg.radius?.code_name)}</td>` +
+    `<td>${esc(acct.user_name || '')}</td>` +
+    `<td>${esc(acct.mac || '')}</td>` +
+    `<td>${esc(acct.nas || '')}</td>`;
+  tr.addEventListener('click', () => selectPacket(id));
   tbody.prepend(tr);
-  while (tbody.children.length > 200) tbody.removeChild(tbody.lastChild);
+
+  livePackets.unshift({ id, msg, tr });
+  while (livePackets.length > LIVE_MAX) {
+    const old = livePackets.pop();
+    if (old.tr.parentNode) old.tr.parentNode.removeChild(old.tr);
+    if (selectedPacketId === old.id) {
+      selectedPacketId = null;
+      closeInspector();
+    }
+  }
 }
 
-$('live-clear').onclick = () => { $('live-rows').innerHTML = ''; };
+function findPacketIndex(id) {
+  return livePackets.findIndex((p) => p.id === id);
+}
+
+function selectPacket(id) {
+  const idx = findPacketIndex(id);
+  if (idx < 0) return;
+  selectedPacketId = id;
+  livePackets.forEach((p) => p.tr.classList.toggle('selected', p.id === id));
+  openInspector(livePackets[idx].msg);
+}
+
+function openInspector(msg) {
+  const panel = $('packet-inspector');
+  const layout = document.querySelector('.live-layout');
+  panel.classList.remove('hidden');
+  panel.setAttribute('aria-hidden', 'false');
+  layout.classList.add('inspector-open');
+  renderInspector(msg);
+}
+
+function closeInspector() {
+  selectedPacketId = null;
+  livePackets.forEach((p) => p.tr.classList.remove('selected'));
+  const panel = $('packet-inspector');
+  panel.classList.add('hidden');
+  panel.setAttribute('aria-hidden', 'true');
+  document.querySelector('.live-layout')?.classList.remove('inspector-open');
+  $('inspector-body').innerHTML = '';
+}
+
+function dlRows(pairs) {
+  return pairs
+    .filter(([, v]) => v !== undefined && v !== null && v !== '')
+    .map(([k, v]) => `<dt>${esc(k)}</dt><dd>${esc(v)}</dd>`)
+    .join('');
+}
+
+function renderInspector(msg) {
+  const radius = msg.radius || {};
+  const acct = msg.accounting || {};
+  const attrs = Array.isArray(msg.decoded_attributes) ? msg.decoded_attributes : [];
+
+  const snapPairs = [
+    ['user', acct.user_name],
+    ['MAC', acct.mac || acct.calling_station_id],
+    ['NAS', acct.nas],
+    ['NAS id', acct.nas_identifier],
+    ['vendor', acct.nas_vendor],
+    ['status', acct.status_type],
+    ['session', acct.acct_session_id],
+    ['framed IP', acct.framed_ip],
+    ['session time', acct.session_time_sec != null ? `${acct.session_time_sec}s` : ''],
+    ['in/out octets', (acct.input_octets != null || acct.output_octets != null)
+      ? `${acct.input_octets ?? '—'} / ${acct.output_octets ?? '—'}` : ''],
+    ['terminate', acct.terminate_cause],
+  ];
+
+  $('inspector-body').innerHTML = `
+    <div class="inspector-section">
+      <h4>Capture</h4>
+      <dl class="inspector-dl">${dlRows([
+        ['time', msg.timestamp ? new Date(msg.timestamp).toLocaleString() : ''],
+        ['source', msg.source],
+        ['remote', msg.remote_addr],
+        ['iface', msg.capture_interface],
+        ['src', msg.src_addr],
+        ['dst', msg.dst_addr],
+      ])}</dl>
+    </div>
+    <div class="inspector-section">
+      <h4>RADIUS</h4>
+      <dl class="inspector-dl">${dlRows([
+        ['code', radius.code_name != null ? `${radius.code_name} (${radius.code})` : radius.code],
+        ['identifier', radius.identifier],
+        ['length', radius.length],
+        ['authenticator', radius.authenticator],
+      ])}</dl>
+    </div>
+    <div class="inspector-section">
+      <h4>Snapshot</h4>
+      <dl class="inspector-dl">${dlRows(snapPairs) || '<dt></dt><dd class="muted">—</dd>'}</dl>
+    </div>
+    <div class="inspector-section">
+      <h4>Attributes (${attrs.length})</h4>
+      <input type="search" class="attr-filter" id="attr-filter" placeholder="Filter by name or value…" />
+      <table class="attr-table">
+        <thead><tr><th>Name</th><th>Value</th></tr></thead>
+        <tbody id="attr-rows"></tbody>
+      </table>
+    </div>
+  `;
+
+  const tbody = $('attr-rows');
+  const renderAttrs = (q) => {
+    const needle = (q || '').trim().toLowerCase();
+    tbody.innerHTML = attrs
+      .filter((a) => {
+        if (!needle) return true;
+        const hay = `${a.name || ''} ${a.value || ''} ${a.raw || ''} ${a.vendor_name || ''}`.toLowerCase();
+        return hay.includes(needle);
+      })
+      .map((a) => {
+        const label = a.is_vsa
+          ? `${a.name || 'VSA'}${a.vendor_name ? ` (${a.vendor_name})` : ''}`
+          : (a.name || `attr-${a.attr_id}`);
+        const val = a.enum_name ? `${a.value} [${a.enum_name}]` : (a.value ?? a.raw ?? '');
+        return `<tr class="${a.is_vsa ? 'vsa' : ''}"><td>${esc(label)}</td><td class="attr-value">${esc(val)}</td></tr>`;
+      })
+      .join('') || `<tr><td colspan="2" class="muted">No attributes</td></tr>`;
+  };
+  renderAttrs('');
+  $('attr-filter').oninput = (e) => renderAttrs(e.target.value);
+
+  $('inspector-body').dataset.json = JSON.stringify(msg, null, 2);
+}
+
+$('live-clear').onclick = () => {
+  livePackets = [];
+  selectedPacketId = null;
+  $('live-rows').innerHTML = '';
+  closeInspector();
+};
+
+$('inspector-close').onclick = () => closeInspector();
+
+$('inspector-copy').onclick = async () => {
+  const text = $('inspector-body').dataset.json || '';
+  try {
+    await navigator.clipboard.writeText(text);
+  } catch {
+    const ta = document.createElement('textarea');
+    ta.value = text;
+    document.body.appendChild(ta);
+    ta.select();
+    document.execCommand('copy');
+    ta.remove();
+  }
+};
+
+document.addEventListener('keydown', (e) => {
+  if (!isTabActive('live')) return;
+  if (e.key === 'Escape' && selectedPacketId) {
+    e.preventDefault();
+    closeInspector();
+    return;
+  }
+  if (e.key !== 'ArrowDown' && e.key !== 'ArrowUp') return;
+  if (!livePackets.length) return;
+  e.preventDefault();
+  let idx = selectedPacketId ? findPacketIndex(selectedPacketId) : -1;
+  if (e.key === 'ArrowDown') {
+    idx = idx < 0 ? 0 : Math.min(idx + 1, livePackets.length - 1);
+  } else {
+    idx = idx < 0 ? 0 : Math.max(idx - 1, 0);
+  }
+  selectPacket(livePackets[idx].id);
+  livePackets[idx].tr.scrollIntoView({ block: 'nearest' });
+});
 
 async function loadForwarder() {
   const cfg = await api('/api/v1/forwarder');

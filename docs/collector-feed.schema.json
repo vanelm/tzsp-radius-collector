@@ -35,6 +35,14 @@
       "type": "string",
       "description": "Network interface name when available (usually for raw_sniff mode)."
     },
+    "src_addr": {
+      "type": "string",
+      "description": "L3 source address extracted from the captured frame when available."
+    },
+    "dst_addr": {
+      "type": "string",
+      "description": "L3 destination address extracted from the captured frame when available."
+    },
     "radius": {
       "$ref": "#/$defs/radius_packet"
     },

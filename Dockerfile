@@ -1,17 +1,17 @@
 # syntax=docker/dockerfile:1
 
 FROM golang:1.21-alpine AS builder
-RUN apk add --no-cache gcc musl-dev libpcap-dev linux-headers
 WORKDIR /src
 
 COPY go.mod go.sum ./
 RUN go mod download
 
 COPY . .
-RUN CGO_ENABLED=1 GOOS=linux go build -o /out/tzsp-radius-collector ./main.go
+ENV CGO_ENABLED=0 GOOS=linux GOMAXPROCS=1
+RUN go build -trimpath -ldflags="-s -w" -p 1 -o /out/tzsp-radius-collector ./main.go
 
 FROM alpine:3.20
-RUN apk add --no-cache libpcap ca-certificates
+RUN apk add --no-cache ca-certificates
 WORKDIR /app
 
 COPY --from=builder /out/tzsp-radius-collector /app/tzsp-radius-collector

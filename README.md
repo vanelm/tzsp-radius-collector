@@ -2,6 +2,12 @@
 
 Small collector that ingests TZSP and raw-sniffed RADIUS traffic, decodes attributes using dictionary files, and streams JSON over WebSocket subscriptions.
 
+## Documentation
+
+Project docs (architecture, config, API, WebSocket, harness, operations):
+
+- **[docs/README.md](docs/README.md)**
+
 ## Features
 
 - TZSP UDP ingest (`URSA_TZSP_ENABLE_UDP=true`)

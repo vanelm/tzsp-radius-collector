@@ -26,10 +26,24 @@
           <label><input type="checkbox" id="live-pause" /> Pause</label>
           <button type="button" class="btn" id="live-clear">Clear</button>
         </header>
-        <table>
-          <thead><tr><th>Time</th><th>Source</th><th>Code</th><th>User</th><th>MAC</th><th>NAS</th></tr></thead>
-          <tbody id="live-rows"></tbody>
-        </table>
+        <div class="live-layout">
+          <div class="live-table-wrap">
+            <table>
+              <thead><tr><th>Time</th><th>Source</th><th>Code</th><th>User</th><th>MAC</th><th>NAS</th></tr></thead>
+              <tbody id="live-rows"></tbody>
+            </table>
+          </div>
+          <aside id="packet-inspector" class="packet-inspector hidden" aria-hidden="true">
+            <div class="inspector-header">
+              <h3>Packet</h3>
+              <div class="inspector-actions">
+                <button type="button" class="btn" id="inspector-copy">Copy JSON</button>
+                <button type="button" class="btn" id="inspector-close">Close</button>
+              </div>
+            </div>
+            <div class="inspector-body" id="inspector-body"></div>
+          </aside>
+        </div>
       </section>
 
       <section id="tab-forward" class="tab">
