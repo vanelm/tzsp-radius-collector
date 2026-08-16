@@ -25,15 +25,20 @@ body {
   line-height: 1.4;
 }
 
-.app { display: grid; grid-template-columns: 220px 1fr; min-height: 100vh; }
-.sidebar { background: var(--panel); border-right: 1px solid var(--border); padding: 1rem; }
+.app { display: grid; grid-template-columns: 220px 1fr; height: 100vh; overflow: hidden; }
+.sidebar { background: var(--panel); border-right: 1px solid var(--border); padding: 1rem; overflow: auto; }
 .sidebar h1 { font-size: 1rem; margin: 0 0 1rem; }
 nav { display: flex; flex-direction: column; gap: 0.35rem; }
 .status-box { margin-top: 1rem; font-size: 0.75rem; color: var(--muted); line-height: 1.4; white-space: pre-wrap; }
 
-main { padding: 1rem 1.25rem; overflow: auto; }
+main { padding: 1rem 1.25rem; overflow: hidden; min-height: 0; display: flex; flex-direction: column; }
 .tab { display: none; }
-.tab.active { display: block; }
+.tab.active { display: block; flex: 1; min-height: 0; overflow: auto; }
+.tab.tab-fill.active {
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
 header { display: flex; align-items: center; gap: 0.75rem; margin-bottom: 0.75rem; flex-wrap: wrap; }
 h2 { margin: 0 0 0.75rem; font-size: 1.1rem; }
 h3 { margin: 1rem 0 0.5rem; font-size: 0.95rem; }
@@ -46,6 +51,15 @@ th { color: var(--muted); font-weight: 600; }
 .row { display: flex; gap: 0.5rem; margin-bottom: 0.75rem; flex-wrap: wrap; align-items: center; }
 .replay-panel { margin-top: 1rem; padding: 0.75rem; border: 1px solid var(--border); border-radius: 8px; display: flex; gap: 0.75rem; flex-wrap: wrap; align-items: center; }
 .catalog-io { margin-bottom: 1rem; }
+#nas-rows tr.editing td { background: #243044; }
+td.mono {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  word-break: break-all;
+}
+td.row-actions {
+  white-space: nowrap;
+}
+td.row-actions .btn + .btn { margin-left: 0.25rem; }
 
 /* Shared control chrome */
 input:not([type="checkbox"]):not([type="radio"]),
@@ -129,9 +143,15 @@ button.btn-danger {
 .muted { color: var(--muted); font-size: var(--font-size); }
 
 /* Live feed + packet inspector */
+.tab-fill .live-layout {
+  flex: 1;
+  min-height: 0;
+}
+
 .live-layout {
   display: grid;
   grid-template-columns: 1fr;
+  grid-template-rows: minmax(0, 1fr);
   gap: 0;
   min-height: 0;
 }
@@ -144,6 +164,16 @@ button.btn-danger {
 .live-table-wrap {
   overflow: auto;
   min-width: 0;
+  min-height: 0;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+}
+
+.live-table-wrap thead th {
+  position: sticky;
+  top: 0;
+  background: var(--bg);
+  z-index: 1;
 }
 
 #live-rows tr {
@@ -164,10 +194,9 @@ button.btn-danger {
   border: 1px solid var(--border);
   border-radius: 8px;
   padding: 0.75rem;
-  max-height: calc(100vh - 6rem);
+  min-height: 0;
+  max-height: 100%;
   overflow: auto;
-  position: sticky;
-  top: 0.5rem;
 }
 
 .packet-inspector.hidden {

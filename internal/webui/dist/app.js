@@ -601,12 +601,61 @@ async function replayRecording(id) {
 
 $('replay-stop').onclick = async () => { await api('/api/v1/replay/stop', { method: 'POST', body: '{}' }); refreshStatus(); };
 
+/** @type {Record<string, object>} */
+let nasById = {};
+let editingNasId = null;
+
+function resetNasForm() {
+  editingNasId = null;
+  $('nas-form').reset();
+  $('nas-submit').textContent = 'Add NAS';
+  $('nas-cancel').hidden = true;
+}
+
+function startNasEdit(id) {
+  const n = nasById[id];
+  if (!n) return;
+  editingNasId = id;
+  const form = $('nas-form');
+  form.elements.name.value = n.name || '';
+  form.elements.ip.value = n.ip || '';
+  form.elements.secret.value = n.secret || '';
+  form.elements.vendor.value = n.vendor || '';
+  form.elements.identifier.value = n.identifier || '';
+  $('nas-submit').textContent = 'Save NAS';
+  $('nas-cancel').hidden = false;
+  form.elements.secret.focus();
+  loadCatalog();
+}
+
 async function loadCatalog() {
   const [nas, clients] = await Promise.all([api('/api/v1/nas'), api('/api/v1/clients')]);
-  $('nas-rows').innerHTML = nas.map((n) => `<tr><td>${n.name}</td><td>${n.ip}</td><td>${n.vendor}</td><td><button type="button" class="btn btn-danger" data-del-nas="${n.id}">Delete</button></td></tr>`).join('');
+  nasById = Object.fromEntries((nas || []).map((n) => [n.id, n]));
+  $('nas-rows').innerHTML = (nas || []).map((n) => {
+    const secret = n.secret
+      ? `<td class="mono">${esc(n.secret)}</td>`
+      : `<td class="muted">—</td>`;
+    return `<tr class="${editingNasId === n.id ? 'editing' : ''}">
+      <td>${esc(n.name)}</td>
+      <td>${esc(n.ip)}</td>
+      ${secret}
+      <td>${esc(n.vendor)}</td>
+      <td class="row-actions">
+        <button type="button" class="btn" data-edit-nas="${esc(n.id)}">Edit</button>
+        <button type="button" class="btn btn-danger" data-del-nas="${esc(n.id)}">Delete</button>
+      </td>
+    </tr>`;
+  }).join('');
   $('client-rows').innerHTML = clients.map((c) => `<tr><td>${c.mac}</td><td>${c.username}</td><td><button type="button" class="btn btn-danger" data-del-client="${c.id}">Delete</button></td></tr>`).join('');
+  $('nas-rows').querySelectorAll('[data-edit-nas]').forEach((b) => {
+    b.onclick = () => startNasEdit(b.dataset.editNas);
+  });
   $('nas-rows').querySelectorAll('[data-del-nas]').forEach((b) => {
-    b.onclick = async () => { await api(`/api/v1/nas/${b.dataset.delNas}`, { method: 'DELETE' }); loadCatalog(); };
+    b.onclick = async () => {
+      if (editingNasId === b.dataset.delNas) resetNasForm();
+      await api(`/api/v1/nas/${b.dataset.delNas}`, { method: 'DELETE' });
+      loadCatalog();
+    };
   });
   $('client-rows').querySelectorAll('[data-del-client]').forEach((b) => {
     b.onclick = async () => { await api(`/api/v1/clients/${b.dataset.delClient}`, { method: 'DELETE' }); loadCatalog(); };
@@ -615,11 +664,34 @@ async function loadCatalog() {
   $('synth-clients').innerHTML = clients.map((c) => `<option value="${c.id}">${c.mac}</option>`).join('');
 }
 
+$('nas-cancel').onclick = () => {
+  resetNasForm();
+  loadCatalog();
+};
+
 $('nas-form').onsubmit = async (e) => {
   e.preventDefault();
-  const fd = new FormData(e.target);
-  await api('/api/v1/nas', { method: 'POST', body: JSON.stringify(Object.fromEntries(fd)) });
-  e.target.reset();
+  const fd = Object.fromEntries(new FormData(e.target));
+  if (editingNasId) {
+    const prev = nasById[editingNasId] || {};
+    await api(`/api/v1/nas/${editingNasId}`, {
+      method: 'PUT',
+      body: JSON.stringify({
+        name: fd.name,
+        ip: fd.ip,
+        secret: fd.secret,
+        vendor: fd.vendor,
+        identifier: fd.identifier,
+        auth_port: prev.auth_port || 1812,
+        acct_port: prev.acct_port || 1813,
+        notes: prev.notes || '',
+      }),
+    });
+    resetNasForm();
+  } else {
+    await api('/api/v1/nas', { method: 'POST', body: JSON.stringify(fd) });
+    e.target.reset();
+  }
   loadCatalog();
 };
 

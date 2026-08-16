@@ -179,12 +179,26 @@ func (s *Server) handleNASItem(w http.ResponseWriter, r *http.Request) {
 		}
 		writeJSON(w, http.StatusOK, item)
 	case http.MethodPut:
+		existing, err := s.store.GetNAS(id)
+		if err != nil {
+			writeError(w, http.StatusNotFound, err)
+			return
+		}
 		var item store.NAS
 		if err := decodeJSON(r, &item); err != nil {
 			writeError(w, http.StatusBadRequest, err)
 			return
 		}
 		item.ID = id
+		if item.AuthPort == 0 {
+			item.AuthPort = existing.AuthPort
+		}
+		if item.AcctPort == 0 {
+			item.AcctPort = existing.AcctPort
+		}
+		if item.Notes == "" {
+			item.Notes = existing.Notes
+		}
 		if err := s.store.UpdateNAS(item); err != nil {
 			writeError(w, http.StatusNotFound, err)
 			return
